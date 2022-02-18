@@ -110,12 +110,9 @@ def get_models(model, emotions, freeze):
 					p.requires_grad = False
 			# Feedforward layers
 			self.fc0 = torch.nn.Linear(get_hidden_size(self.bert, self.tokenizer), 128)
-			self.sm0 = torch.nn.Softmax(1)
-			self.fc1 = torch.nn.Linear(128, 256)
-			self.sm1 = torch.nn.Softmax(1)
-			self.fc2 = torch.nn.Linear(256, 128)
-			self.sm2 = torch.nn.Softmax(1)
-			self.fc3 = torch.nn.Linear(128, 1)
+			self.sm0 = torch.nn.ReLU()
+			self.fc1 = torch.nn.Linear(128, 1)
+
 		def forward(self, x):
 			# Tokenize, without gradient
 			with torch.no_grad():
@@ -125,9 +122,7 @@ def get_models(model, emotions, freeze):
 			net = torch.flatten(net, start_dim=1)
 			# Feed BERT into feed forward net
 			net = self.sm0(self.fc0(net))
-			net = self.sm1(self.fc1(net))
-			net = self.sm2(self.fc2(net))
-			net = self.fc3(net)
+			net = self.fc1(net)
 			return net
 
 	if model == 'bert':
