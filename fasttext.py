@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
 import json
 import argparse
 import transformers # pytorch transformers
@@ -25,10 +26,8 @@ from collections import defaultdict
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
 
-from torchnlp.word_to_vector import FastText  # doctest: +SKIP
-
-
-from torchnlp.word_to_vector import FastText
+import string
+punc = string.punctuation + '’—”“‘’"'
 
 def clean(text):
 	"""
@@ -46,26 +45,29 @@ def clean(text):
 	# Remove trailing whitespace
 	text = re.sub(r'\s+', ' ', text).strip()
 
-	return text
+	text = ' '.join([w.lower().strip(' ') for w in text.split(' ')])
+	text = ''.join(w for w in text if w not in punc)
+	return text.strip(' ')
 
 def eec_builder(eec_dict, tag):
 
 	with open('eec/{}.csv'.format(tag), encoding='utf-8') as csv_file:
-	csv_reader = csv.reader(csv_file, delimiter=',')
-	headers = next(csv_reader)
-	for row in csv_reader:
-		sentence = row[1]
-		gender = row[4]
-		race = row[5]
-		emotion = row[6]
-		if emotion == '':
-			emotion = 'valence'
-		if race == '':
-			eec_dict[tag][emotion][gender].append(sentence)
-		else:
-			eec_dict[tag][emotion][gender + ' ' + race].append(sentence)
-			eec_dict[tag][emotion][gender].append(sentence)
-			eec_dict[tag][emotion][race].append(sentence)
+		csv_reader = csv.reader(csv_file, delimiter=',')
+		headers = next(csv_reader)
+		for row in csv_reader:
+			sentence = row[1]
+			gender = row[4]
+			race = row[5]
+			emotion = row[6]
+			if emotion == '':
+				emotion = 'valence'
+			if race == '':
+				eec_dict[tag][emotion][gender].append(sentence)
+			else:
+				eec_dict[tag][emotion][gender + ' ' + race].append(sentence)
+				eec_dict[tag][emotion][gender].append(sentence)
+				eec_dict[tag][emotion][race].append(sentence)
+	return eec_dict
 
 def get_eecs():
 	#build all of the eecs
@@ -82,11 +84,69 @@ def get_eecs():
 	
 	return eec_dict
 
+def get_eec_dict(language, emotion):
+	eec_dict = defaultdict(list)
+	with open('eec/{}.csv'.format(language), encoding='utf-8') as csv_file:
+		csv_reader = csv.reader(csv_file, delimiter=',')
+		headers = next(csv_reader)
+		for row in csv_reader:
+			sentence = row[1]
+			gender = row[4]
+			race = row[5]
+			n_emotion = row[6]
+			if n_emotion == '':
+				n_emotion = 'valence'
+			if n_emotion == emotion:
+				if race == '':
+					eec_dict[gender].append(sentence)
+				else:
+					eec_dict[gender + ' ' + race].append(sentence)
+					eec_dict[gender].append(sentence)
+					eec_dict[race].append(sentence)
+	return eec_dict
+
+def load_vectors(fname, vocab):
+	fin = io.open(fname, 'r', encoding='utf-8', newline='\n', errors='ignore')
+	n, d = map(int, fin.readline().split())
+	data = {}
+	word2idx = {}
+	for line in fin:
+		tokens = line.rstrip().split(' ')
+		if tokens[0] in vocab:
+			data[tokens[0]] = np.array(tokens[1:], dtype=np.float32)
+			word2idx[tokens[0]] = len(word2idx)
+	word2idx['<unk>'] = len(word2idx)
+	word2idx['<pad>'] = len(word2idx)
+
+	return data, word2idx
+
+def vectorize_word2idx(x, word2idx, max_len):
+	sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
+	while len(sent) < max_len:
+		sent.append(word2idx['<pad>'])
+	return sent
+
 def get_data(language, emotion):
+	class FTDataset(Dataset):
+		def __init__(self, df, max_len, word2idx=None):
+			self.X = df['text'].apply(lambda x: vectorize_word2idx(x, word2idx, max_len))
+			self.y = df['label']
+
+		def __len__(self):
+			return len(self.y)
+
+		def __getitem__(self, idx):
+			X = self.X[idx]
+			y = self.y[idx]
+			return X, y
+
+	embedding_dim = 300
 	if language == 'en' or language == 'en_es' or language == 'en_ar':
 		language_tag = 'En'
+
 	if language == 'es':
 		language_tag = 'Es'
+
 	if language == 'ar':
 		language_tag = 'Ar'
 
@@ -100,24 +160,38 @@ def get_data(language, emotion):
 		dv = open('data/2018-Valence-reg-{}-dev.txt'.format(language_tag), encoding="utf8")
 
 	# Training examples
+	vocab = set()
+
+	max_len=0
+
 	tr_ex = []
 	for line in tr:
 		l = line.split('\t')
-		tr_ex.append((clean(l[1]),l[-1][:-2]))
+		sent = clean(l[1])
+		vocab.update(sent.split(' '))
+		max_len = max(max_len, len(sent.split(' ')))
+
+		tr_ex.append((sent,l[-1][:-2]))
 	tr_ex = tr_ex[1:]
 
 	# Test examples
 	te_ex = []
 	for line in te:
 		l = line.split('\t')
-		te_ex.append((clean(l[1]),l[-1][:-2]))
+		sent = clean(l[1])
+		max_len = max(max_len, len(sent.split(' ')))
+
+		te_ex.append((sent,l[-1][:-2]))
 	te_ex = te_ex[1:]
 
 	# Dev (validation) examples
 	dv_ex = []
 	for line in dv:
 		l = line.split('\t')
-		dv_ex.append((clean(l[1]),l[-1][:-2]))
+		sent = clean(l[1])
+		max_len = max(max_len, len(sent.split(' ')))
+
+		dv_ex.append((sent,l[-1][:-2]))
 	dv_ex = dv_ex[1:]
 
 	# Format examples into lists
@@ -125,89 +199,67 @@ def get_data(language, emotion):
 	dv_x, dv_y = [dv_ex[i][0] for i in range(len(dv_ex))], [float(dv_ex[i][1]) for i in range(len(dv_ex))] 
 	tr_x, tr_y = [tr_ex[i][0] for i in range(len(tr_ex))], [float(tr_ex[i][1]) for i in range(len(tr_ex))]
 
-	return tr_x, tr_y, dv_x, dv_y, te_x, te_y
+	if language == 'en' or language == 'en_es' or language == 'en_ar':
+		embeddings_matrix, word2idx = load_vectors('ft_en', vocab)
 
-def get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y):
-	# Put x and y into Dataset objects
-	train_dataset = Dataset.from_pandas(pd.DataFrame(list(zip(tr_x, tr_y)), columns=['text', 'label']))
-	dev_dataset = Dataset.from_pandas(pd.DataFrame(list(zip(dv_x, dv_y)), columns=['text', 'label']))
-	test_dataset = Dataset.from_pandas(pd.DataFrame(list(zip(te_x, te_y)), columns=['text', 'label']))
+	if language == 'es':
+		embeddings_matrix, word2idx = load_vectors('ft_es', vocab)
+
+	if language == 'ar':
+		embeddings_matrix, word2idx = load_vectors('ft_ar', vocab)
+
+
+	tr_dataset = FTDataset(pd.DataFrame(list(zip(tr_x, tr_y)), columns=['text', 'label']), max_len, word2idx)
+	dv_dataset = FTDataset(pd.DataFrame(list(zip(dv_x, dv_y)), columns=['text', 'label']), max_len ,word2idx)
+	te_dataset = FTDataset(pd.DataFrame(list(zip(te_x, te_y)), columns=['text', 'label']), max_len, word2idx)
 
 	# Put datasets into loaders
-	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
-	dev_loader = torch.utils.data.DataLoader(dev_dataset, batch_size=32, shuffle=True)
-	test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=True)
+	train_loader = torch.utils.data.DataLoader(tr_dataset, batch_size=24, shuffle=True, drop_last=True)
+	dev_loader = torch.utils.data.DataLoader(dv_dataset, batch_size=24, shuffle=True, drop_last=True)
+	test_loader = torch.utils.data.DataLoader(te_dataset, batch_size=24, shuffle=True, drop_last=True)
 
-	return train_loader, dev_loader, test_loader
+	return train_loader, dev_loader, test_loader, embeddings_matrix, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len
 
-def get_models(language, emotion, hid_size=128):
 
-	class fastTextRegressor(torch.nn.Module):
+def get_model(embeddings_matrix, word2idx, hid_size=128):
+
+	#use this
+	class fastTextRegressor(nn.Module):
 		def __init__(self, embeddings, embedding_dim, hid_size):
 			super(fastTextRegressor, self).__init__()
 
 			self.embeddings = nn.Embedding.from_pretrained(embeddings=embeddings)
-			self.pool = nn.AvgPool1d(1)
-			self.linear1 = nn.Linear(embedding_dim, hid_size, dtype=torch.float64)
-			self.activation = nn.ReLU()
-			self.linear2 = nn.Linear(hid_size , 1, dtype=torch.float64)
+			self.linear1 = nn.Linear(embedding_dim, 1)
+			#self.activation = nn.ReLU()
+			#self.linear2 = nn.Linear(hid_size , 1, dtype=torch.float64)
 
 		def forward(self, x):
-			out = self.embeddings(x).permute(0,2,1)
-			out = self.pool(out).squeeze()
-			out = self.linear1(out)
-			out = self.activation(out)
-			out = self.linear2(out)
+			if len(x.shape) == 1:
+				out = self.embeddings(x).permute(1, 0)
+				out = out.sum(dim=1) #pooling = sum from Pytorch
+				out = self.linear1(out) #cast to float, pass through linear 1st layer
+				return out
+			
+			out = self.embeddings(x).permute(1, 0, 2)
+			out = out.sum(dim=1) #pooling = sum from Pytorch
+			out = self.linear1(out) #cast to float, pass through linear 1st layer
 			return out
-
-	class fastTextRecurrentRegressor(nn.Module):
-		def __init__(self, embeddings, embedding_dim, hid_size):
-			super(RecurrentNetwork, self).__init__()
-
-			self.embeddings = nn.Embedding.from_pretrained(embeddings=embeddings)
-			self.rnn = nn.LSTM(embedding_dim, hid_size, num_layers=2, batch_first=True, dtype=torch.float64, dropout=0.2)
-			self.linear = nn.Linear(hid_size, 1, dtype=torch.float64)
-
-		def forward(self, x):
-
-			out = self.embeddings(x)
-			out, (hn, cn) = self.rnn(out)
-			out = hn[-1]
-			out = self.linear(out)
-
-			return out
-
-
-	# language, emotion
-	tr_x, tr_y, _, _, _, _ = get_data(language, emotion)
-
-
-
-
-	if language in ['en', 'en_es', 'en_ar']:
-		vectors = FastText(language='en')
-		embedding_dim = 300
-	if language  == 'es':
-		vectors = FastText(language='es')
-		embedding_dim = 300
-	if language == 'ar':
-		vectors = FastText(language='ar')
-		embedding_dim = 300
-
-	embeddings = np.zeros((len(train_data.word2idx), embedding_dim))  # vocab_length x embedding_dimension
-	for word, i in train_data.word2idx.items():
-	if word == '<pad>':
-	pass  # Leave the "pad" embedding all zeroes
-	elif word == '<unk>':
-	embeddings[i] = glove['unk']  # GloVe has an embedding for 'unk'
-	else:
-		embeddings[i] = glove[word]  # Take all other words from GloVe
 
 	# Convert embeddings to a PyTorch tensor
-	embeddings = torch.tensor(embeddings)
-
 	
-	model = fastTextRegressor(embeddings, embedding_dim, hid_size)
+	embeddings = np.zeros((len(word2idx), 300))
+	for word, i in word2idx.items():
+		if word == '<unk>':
+			embeddings[i] = np.zeros(300)
+		elif word == '<pad>':
+			embeddings[i] = np.random.randn(300)
+		else:
+			embeddings[i] = embeddings_matrix[word] 
+	
+	# Convert embeddings to a PyTorch tensor
+	embeddings = torch.tensor(embeddings, dtype=torch.float32)
+	
+	model = fastTextRegressor(embeddings, 300, hid_size)
 	return model
 
 
@@ -232,9 +284,9 @@ def get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred):
 
 def write_results(results, eec_preds, model, freeze):
 	# Save results as JSON
-	with open("results_{}_{}.json".format(model, freeze),"w") as f:
+	with open("results_ft.json".format(model, freeze),"w") as f:
 		json.dump(results,f)
-	with open("eec_preds_{}_{}.json".format(model, freeze),"w") as f:
+	with open("eec_preds_ft.json".format(model, freeze),"w") as f:
 		json.dump(eec_preds, f)
 
 if __name__ == '__main__':
@@ -257,11 +309,8 @@ if __name__ == '__main__':
 	# List of emotions (also our datasets)
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
-	eec_dict = get_eecs()
-	finetuned_model_dict = get_models(args.model, emotions, args.freeze)
-
 	# Training Variables
-	epochs = 5
+	epochs = 10
 	learning_rate = 0.001
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	print('DEVICE:', device)
@@ -272,20 +321,23 @@ if __name__ == '__main__':
 
 			print('***', language, emotion, '***')
 
-			eec_dict_cur = eec_dict[language][emotion]
 
-			# Move model to device
-			#finetuned_model_dict[language][emotion].to(device)
 
-			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion)
-			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
+			#eec_dict_cur = eec_dict[language][emotion]
+			eec_dict_cur = get_eec_dict(language, emotion)
 
-			model = get_model(language, emotion)
+			#tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion)
+			#train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
+
+			train_loader, dev_loader, test_loader, embeddings, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len = get_data(language, emotion)
+
+
+			model = get_model(embeddings, word2idx)
 			model.to(device)
 
 			# Train the model
 			loss_fn = torch.nn.MSELoss()
-			optimizer = torch.optim.Adam(finetuned_model_dict[language][emotion].parameters(), lr=learning_rate)
+			optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 			# Loop through epochs
 			for epoch in range(epochs):
@@ -294,18 +346,22 @@ if __name__ == '__main__':
 				running_loss = 0
 				cnt = 0
 
-				for i, data in tqdm(enumerate(train_loader, 0)):
+				for example in train_loader:
 
 					# Get inputs and labels
-					inputs = data['text']
-					labels = data['label'].float().to(device)
+					inputs = example[0]
+
+					labels = example[1]
 
 					# Zero the parameter gradients
 					optimizer.zero_grad()
 
-					# Forward, backward, optimize
-					outputs = finetuned_model_dict[language][emotion](inputs).squeeze().to(device)
-					loss = loss_fn(outputs, labels)
+
+					inputs = torch.stack((inputs))
+
+
+					outputs = model(inputs).squeeze().to(device)
+					loss = loss_fn(outputs, labels.float())
 					loss.backward()
 					optimizer.step()
 					cnt = cnt + 1
@@ -316,31 +372,47 @@ if __name__ == '__main__':
 				
 			print('ok finished training', language, emotion)
 
-			# Move device back to CPU
-			finetuned_model_dict[language][emotion].to('cpu')
-
 			# Create train_pred
 			train_pred = []
 			with torch.no_grad():
 				for x in tr_x:
-					train_pred.append(finetuned_model_dict[language][emotion](x).item())
+					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
+					while len(sent) < max_len:
+						sent.append(word2idx['<pad>'])
+					sent = torch.tensor(sent)
+
+					train_pred.append(model(sent).squeeze().item())
 
 			# Create dev_pred
 			dev_pred = []
 			with torch.no_grad():
 				for x in dv_x:
-					dev_pred.append(finetuned_model_dict[language][emotion](x).item())
+					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
+					while len(sent) < max_len:
+						sent.append(word2idx['<pad>'])
+					sent = torch.tensor(sent)
+					dev_pred.append(model(sent).item())
 
 			# Create test_pred
 			test_pred = []
 			with torch.no_grad():
 				for x in te_x:
-					test_pred.append(finetuned_model_dict[language][emotion](x).item())
+
+					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
+					while len(sent) < max_len:
+						sent.append(word2idx['<pad>'])
+					sent = torch.tensor(sent)
+					test_pred.append(model(sent).item())
 
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
 				for x in v:
-					eec_preds[language][emotion][k].append(finetuned_model_dict[language][emotion](x).item())
+
+					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
+					while len(sent) < max_len:
+						sent.append(word2idx['<pad>'])
+					sent = torch.tensor(sent)
+					eec_preds[language][emotion][k].append(model(sent).item())
 
 
 			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
