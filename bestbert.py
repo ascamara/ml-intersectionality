@@ -269,6 +269,12 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	print('***** MLI-FAIRNESS *****')
+
+	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+	print('DEVICE: ', device)
+	print('model: ', args.model)
+	print('freeze: ', args.freeze)
+
 	
 	# Results dictionary
 	results = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(float))))
@@ -285,8 +291,6 @@ if __name__ == '__main__':
 	# Training Variables
 	epochs = 20
 	learning_rate = 0.001
-	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-	print('DEVICE:', device)
 
 	# Loop through each (language, emotion/dataset) pair
 	for language in languages:
