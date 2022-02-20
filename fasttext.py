@@ -390,10 +390,10 @@ if __name__ == '__main__':
 					total_loss += dev_loss.item()
 					print(total_loss)
 					if prev_loss - total_loss < 0.005 and epoch > 10: 
-					 print("EARLY STOPPING")
-					 print("EPOCH #")
-					 print(epoch)
-						break 
+						print("EARLY STOPPING")
+						print("EPOCH #")
+						print(epoch)
+						break
 					else:
 						prev_loss = total_loss
 
