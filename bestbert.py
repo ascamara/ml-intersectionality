@@ -7,7 +7,7 @@ import transformers # pytorch transformers
 from transformers import TrainingArguments
 from transformers import Trainer
 from transformers import AutoConfig
-
+import math
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
@@ -87,7 +87,7 @@ def get_hidden_size(model, tokenizer):
 	@return	 size (int): the size of the hidden layer in the model.
 	"""
 	with torch.no_grad():
-		x = tokenizer('Sample sentence for tokenizer', padding='max_length', 		max_length=128, truncation=True, return_tensors='pt')
+		x = tokenizer('Sample sentence for tokenizer', padding='max_length', max_length=128, truncation=True, return_tensors='pt')
 		size = model(**x)[0][:,0,:].shape[1]
 	return size
 
@@ -168,7 +168,7 @@ def get_models(model, emotions, freeze):
 	return finetuned_model_dict
 
 
-def get_data(language, emotion):
+def get_data(language, emotion, device):
 	if language == 'en' or language == 'en_es' or language == 'en_ar':
 		language_tag = 'En'
 	if language == 'es':
@@ -211,7 +211,7 @@ def get_data(language, emotion):
 	dv_x, dv_y = [dv_ex[i][0] for i in range(len(dv_ex))], [float(dv_ex[i][1]) for i in range(len(dv_ex))] 
 	tr_x, tr_y = [tr_ex[i][0] for i in range(len(tr_ex))], [float(tr_ex[i][1]) for i in range(len(tr_ex))]
 
-	return tr_x, tr_y, dv_x, dv_y, te_x, te_y
+	return tr_x.to(device), tr_y.to(device), dv_x.to(device), dv_y.to(device), te_x.to(device), te_y.to(device)
 
 def get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y):
 	# Put x and y into Dataset objects
@@ -252,6 +252,13 @@ def write_results(results, eec_preds, model, freeze):
 	with open("eec_preds_{}_{}.json".format(model, freeze),"w") as f:
 		json.dump(eec_preds, f)
 
+def print_results(language, emotion, results, eec_preds, model, freeze):
+	# Save results as JSON
+	with open("results_{}_{}_{}_{}.json".format(language, emotion, model, freeze),"w") as f:
+		json.dump(results,f)
+	with open("eec_preds_{}_{}_{}_{}.json".format(language, emotion, model, freeze),"w") as f:
+		json.dump(eec_preds, f)
+
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser()
@@ -276,7 +283,7 @@ if __name__ == '__main__':
 	finetuned_model_dict = get_models(args.model, emotions, args.freeze)
 
 	# Training Variables
-	epochs = 5
+	epochs = 20
 	learning_rate = 0.001
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	print('DEVICE:', device)
@@ -292,7 +299,7 @@ if __name__ == '__main__':
 			# Move model to device
 			finetuned_model_dict[language][emotion].to(device)
 
-			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion)
+			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
 
 			# Train the model
@@ -300,6 +307,7 @@ if __name__ == '__main__':
 			optimizer = torch.optim.Adam(finetuned_model_dict[language][emotion].parameters(), lr=learning_rate)
 
 			# Loop through epochs
+			prev_loss = math.inf
 			for epoch in range(epochs):
 
 				# Keep track of statistics
@@ -310,26 +318,44 @@ if __name__ == '__main__':
 
 					# Get inputs and labels
 					inputs = data['text']
-					labels = data['label'].float().to(device)
+					labels = data['label'].float()
 
 					# Zero the parameter gradients
 					optimizer.zero_grad()
 
 					# Forward, backward, optimize
-					outputs = finetuned_model_dict[language][emotion](inputs).squeeze().to(device)
+					outputs = finetuned_model_dict[language][emotion](inputs).squeeze()
 					loss = loss_fn(outputs, labels)
 					loss.backward()
 					optimizer.step()
 					cnt = cnt + 1
 					running_loss += loss.item()
 
+				for i, data in tqdm(enumerate(train_loader, 0)):
+					inputs = data['text']
+					labels = data['label'].float()
+
+					inputs = torch.stack((inputs))
+
+
+					outputs = model(inputs).squeeze()
+					dev_loss = loss_fn(outputs, labels.float())
+
+					total_loss += dev_loss.item()
+					print(total_loss)
+					if prev_loss - total_loss < 0.005 and epoch > 10: 
+					 print("EARLY STOPPING")
+					 print("EPOCH #")
+					 print(epoch)
+						break 
+					else:
+						prev_loss = total_loss
+
 				# Print statistics
 				print('ESTIMATED LOSS:', running_loss/cnt)
 				
 			print('ok finished training', language, emotion)
 
-			# Move device back to CPU
-			finetuned_model_dict[language][emotion].to('cpu')
 
 			# Create train_pred
 			train_pred = []
@@ -349,6 +375,9 @@ if __name__ == '__main__':
 				for x in te_x:
 					test_pred.append(finetuned_model_dict[language][emotion](x).item())
 
+			# Move device back to CPU
+			finetuned_model_dict[language][emotion].to('cpu')
+
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
 				for x in v:
@@ -356,5 +385,7 @@ if __name__ == '__main__':
 
 
 			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
+
+			print_results(language, emotion, results, eec_preds[language][emotion], args.model, args.freeze)
 
 	write_results(results, eec_preds, args.model, args.freeze)

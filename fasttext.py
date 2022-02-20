@@ -8,6 +8,7 @@ import transformers # pytorch transformers
 from transformers import TrainingArguments
 from transformers import Trainer
 
+import math
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
@@ -126,7 +127,7 @@ def vectorize_word2idx(x, word2idx, max_len):
 		sent.append(word2idx['<pad>'])
 	return sent
 
-def get_data(language, emotion):
+def get_data(language, emotion, device):
 	class FTDataset(Dataset):
 		def __init__(self, df, max_len, word2idx=None):
 			self.X = df['text'].apply(lambda x: vectorize_word2idx(x, word2idx, max_len))
@@ -198,6 +199,8 @@ def get_data(language, emotion):
 	te_x, te_y = [te_ex[i][0] for i in range(len(te_ex))], [float(te_ex[i][1]) for i in range(len(te_ex))] 
 	dv_x, dv_y = [dv_ex[i][0] for i in range(len(dv_ex))], [float(dv_ex[i][1]) for i in range(len(dv_ex))] 
 	tr_x, tr_y = [tr_ex[i][0] for i in range(len(tr_ex))], [float(tr_ex[i][1]) for i in range(len(tr_ex))]
+
+	tr_x, tr_y, dv_x, dv_y, te_x, te_y = tr_x.to(device), tr_y.to(device), dv_x.to(device), dv_y.to(device), te_x.to(device), te_y.to(device)
 
 	if language == 'en' or language == 'en_es' or language == 'en_ar':
 		embeddings_matrix, word2idx = load_vectors('ft_en', vocab)
@@ -289,6 +292,13 @@ def write_results(results, eec_preds, model, freeze):
 	with open("eec_preds_ft.json".format(model, freeze),"w") as f:
 		json.dump(eec_preds, f)
 
+def print_results(language, emotion, results, eec_preds, model, freeze):
+	# Save results as JSON
+	with open("results_{}_{}_ft.json".format(language, emotion),"w") as f:
+		json.dump(results,f)
+	with open("eec_preds_{}_{}_ft.json".format(language, emotion),"w") as f:
+		json.dump(eec_preds, f)
+
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser()
@@ -310,7 +320,7 @@ if __name__ == '__main__':
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
 	# Training Variables
-	epochs = 10
+	epochs = 20
 	learning_rate = 0.001
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	print('DEVICE:', device)
@@ -329,7 +339,7 @@ if __name__ == '__main__':
 			#tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion)
 			#train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
 
-			train_loader, dev_loader, test_loader, embeddings, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len = get_data(language, emotion)
+			train_loader, dev_loader, test_loader, embeddings, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len = get_data(language, emotion, device)
 
 
 			model = get_model(embeddings, word2idx)
@@ -340,6 +350,7 @@ if __name__ == '__main__':
 			optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 			# Loop through epochs
+			prev_loss = math.inf
 			for epoch in range(epochs):
 
 				# Keep track of statistics
@@ -356,16 +367,35 @@ if __name__ == '__main__':
 					# Zero the parameter gradients
 					optimizer.zero_grad()
 
-
 					inputs = torch.stack((inputs))
+					outputs = model(inputs).squeeze()
 
-
-					outputs = model(inputs).squeeze().to(device)
 					loss = loss_fn(outputs, labels.float())
 					loss.backward()
 					optimizer.step()
 					cnt = cnt + 1
 					running_loss += loss.item()
+
+				for example in dev_loader:
+					inputs = example[0]
+
+					labels = example[1]
+
+					inputs = torch.stack((inputs))
+					outputs = model(inputs).squeeze()
+
+
+					dev_loss = loss_fn(outputs, labels.float())
+
+					total_loss += dev_loss.item()
+					print(total_loss)
+					if prev_loss - total_loss < 0.005 and epoch > 10: 
+					 print("EARLY STOPPING")
+					 print("EPOCH #")
+					 print(epoch)
+						break 
+					else:
+						prev_loss = total_loss
 
 				# Print statistics
 				print('ESTIMATED LOSS:', running_loss/cnt)
@@ -404,6 +434,8 @@ if __name__ == '__main__':
 					sent = torch.tensor(sent)
 					test_pred.append(model(sent).item())
 
+			model.to('cpu')
+
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
 				for x in v:
@@ -416,5 +448,7 @@ if __name__ == '__main__':
 
 
 			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
+
+			print_results(language, emotion, results, eec_preds[language][emotion], args.model, args.freeze)
 
 	write_results(results, eec_preds, args.model, args.freeze)
