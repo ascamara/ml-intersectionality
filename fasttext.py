@@ -410,7 +410,7 @@ if __name__ == '__main__':
 				
 			print('ok finished training', language, emotion)
 
-			model.to('cpu')
+			#model.to('cpu')
 
 			# Create train_pred
 			train_pred = []
