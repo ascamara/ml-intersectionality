@@ -214,7 +214,7 @@ def get_data(language, emotion, device):
 	dv_x, dv_y = [dv_ex[i][0] for i in range(len(dv_ex))], [float(dv_ex[i][1]) for i in range(len(dv_ex))] 
 	tr_x, tr_y = [tr_ex[i][0] for i in range(len(tr_ex))], [float(tr_ex[i][1]) for i in range(len(tr_ex))]
 
-	return tr_x.to(device), tr_y.to(device), dv_x.to(device), dv_y.to(device), te_x.to(device), te_y.to(device)
+	return tr_x, tr_y, dv_x, dv_y, te_x, te_y
 
 def get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y):
 	# Put x and y into Dataset objects
