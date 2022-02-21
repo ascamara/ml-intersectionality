@@ -257,9 +257,9 @@ def write_results(results, eec_preds, model, freeze):
 
 def print_results(language, emotion, results, eec_preds, model, freeze):
 	# Save results as JSON
-	with open("results_{}_{}_{}_{}.json".format(language, emotion, model, freeze),"w") as f:
+	with open("results/results_{}_{}_{}_{}.json".format(language, emotion, model, freeze),"w") as f:
 		json.dump(results,f)
-	with open("eec_preds_{}_{}_{}_{}.json".format(language, emotion, model, freeze),"w") as f:
+	with open("results/eec_preds_{}_{}_{}_{}.json".format(language, emotion, model, freeze),"w") as f:
 		json.dump(eec_preds, f)
 
 if __name__ == '__main__':
@@ -291,7 +291,7 @@ if __name__ == '__main__':
 	finetuned_model_dict = get_models(args.model, emotions, args.freeze)
 
 	# Training Variables
-	epochs = 20
+	epochs = 10
 	learning_rate = 0.001
 
 	# Loop through each (language, emotion/dataset) pair
@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
 					total_loss += dev_loss.item()
 				print(total_loss)
-				if prev_loss - total_loss < 0.005 and epoch > 10: 
+				if prev_loss - total_loss < 0.01g and epoch > 5: 
 					print("EARLY STOPPING")
 					print("EPOCH #")
 					print(epoch)

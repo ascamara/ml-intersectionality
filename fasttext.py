@@ -295,9 +295,9 @@ def write_results(results, eec_preds, model, freeze):
 
 def print_results(language, emotion, results, eec_preds, model, freeze):
 	# Save results as JSON
-	with open("results_{}_{}_ft.json".format(language, emotion),"w") as f:
+	with open("results/results_{}_{}_ft.json".format(language, emotion),"w") as f:
 		json.dump(results,f)
-	with open("eec_preds_{}_{}_ft.json".format(language, emotion),"w") as f:
+	with open("results/eec_preds_{}_{}_ft.json".format(language, emotion),"w") as f:
 		json.dump(eec_preds, f)
 
 if __name__ == '__main__':
@@ -398,7 +398,7 @@ if __name__ == '__main__':
 					total_loss += dev_loss.item()
 				
 				print(total_loss)
-				if prev_loss - total_loss < 0.005 and epoch > 10: 
+				if prev_loss - total_loss < 0.01 and epoch > 10: 
 					print("EARLY STOPPING")
 					print("EPOCH #")
 					print(epoch)
