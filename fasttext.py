@@ -342,7 +342,6 @@ if __name__ == '__main__':
 
 			train_loader, dev_loader, test_loader, embeddings, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len = get_data(language, emotion, device)
 
-
 			model = get_model(embeddings, word2idx)
 			model.to(device)
 

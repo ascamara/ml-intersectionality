@@ -90,7 +90,7 @@ def get_hidden_size(model, tokenizer):
 	@return	 size (int): the size of the hidden layer in the model.
 	"""
 	with torch.no_grad():
-		x = tokenizer('Sample sentence for tokenizer', padding='max_length', max_length=128, truncation=True, return_tensors='pt')
+		x = tokenizer('Sample sentence for tokenizer', padding='max_length', max_length=64, truncation=True, return_tensors='pt')
 		size = model(**x)[0][:,0,:].shape[1]
 	return size
 
@@ -119,7 +119,7 @@ def get_models(model, emotions, freeze):
 		def forward(self, x):
 			# Tokenize, without gradient
 			with torch.no_grad():
-				x = self.tokenizer(x, padding='max_length', max_length=128, truncation=True, return_tensors='pt').to(device)
+				x = self.tokenizer(x, padding='max_length', max_length=64, truncation=True, return_tensors='pt').to(device)
 			# Feed tokens into BERT
 			net = self.bert(**x)[0][:,0,:]
 			net = torch.flatten(net, start_dim=1)
@@ -223,9 +223,9 @@ def get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y):
 	test_dataset = Dataset.from_pandas(pd.DataFrame(list(zip(te_x, te_y)), columns=['text', 'label']))
 
 	# Put datasets into loaders
-	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
-	dev_loader = torch.utils.data.DataLoader(dev_dataset, batch_size=32, shuffle=True)
-	test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=True)
+	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=8, shuffle=True)
+	dev_loader = torch.utils.data.DataLoader(dev_dataset, batch_size=8, shuffle=True)
+	test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=8, shuffle=True)
 
 	return train_loader, dev_loader, test_loader
 
