@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
 					total_loss += dev_loss.item()
 				print(total_loss)
-				if prev_loss - total_loss < 0.01g and epoch > 5: 
+				if prev_loss - total_loss < 0.01 and epoch > 5: 
 					print("EARLY STOPPING")
 					print("EPOCH #")
 					print(epoch)
