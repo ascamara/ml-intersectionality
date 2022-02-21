@@ -355,6 +355,7 @@ if __name__ == '__main__':
 			for epoch in range(epochs):
 
 				# Keep track of statistics
+				total_loss = 0
 				running_loss = 0
 				cnt = 0
 
