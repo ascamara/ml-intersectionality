@@ -27,6 +27,7 @@ from collections import defaultdict
 
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def clean(text):
 	"""
@@ -118,7 +119,7 @@ def get_models(model, emotions, freeze):
 		def forward(self, x):
 			# Tokenize, without gradient
 			with torch.no_grad():
-				x = self.tokenizer(x, padding='max_length', max_length=128, truncation=True, return_tensors='pt')
+				x = self.tokenizer(x, padding='max_length', max_length=128, truncation=True, return_tensors='pt').to(device)
 			# Feed tokens into BERT
 			net = self.bert(**x)[0][:,0,:]
 			net = torch.flatten(net, start_dim=1)
@@ -272,7 +273,6 @@ if __name__ == '__main__':
 
 	print('***** MLI-FAIRNESS *****')
 
-	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	print('DEVICE: ', device)
 	print('model: ', args.model)
 	print('freeze: ', args.freeze)
@@ -330,6 +330,10 @@ if __name__ == '__main__':
 					optimizer.zero_grad()
 
 					# Forward, backward, optimize
+
+					#inputs = inputs.to(device)
+					labels = labels.to(device)
+
 					outputs = finetuned_model_dict[language][emotion](inputs).squeeze()
 					loss = loss_fn(outputs, labels)
 					loss.backward()
@@ -343,9 +347,11 @@ if __name__ == '__main__':
 
 					inputs = torch.stack((inputs))
 
+					#inputs = inputs.to(device)
+					labels = labels.to(device)
 
 					outputs = model(inputs).squeeze()
-					dev_loss = loss_fn(outputs, labels.float())
+					dev_loss = loss_fn(outputs, labels)
 
 					total_loss += dev_loss.item()
 					print(total_loss)
@@ -361,7 +367,6 @@ if __name__ == '__main__':
 				print('ESTIMATED LOSS:', running_loss/cnt)
 				
 			print('ok finished training', language, emotion)
-
 
 			# Create train_pred
 			train_pred = []
@@ -382,7 +387,7 @@ if __name__ == '__main__':
 					test_pred.append(finetuned_model_dict[language][emotion](x).item())
 
 			# Move device back to CPU
-			finetuned_model_dict[language][emotion].to('cpu')
+			#finetuned_model_dict[language][emotion].to('cpu')
 
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():

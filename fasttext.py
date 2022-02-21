@@ -218,9 +218,9 @@ def get_data(language, emotion, device):
 	te_dataset = FTDataset(pd.DataFrame(list(zip(te_x, te_y)), columns=['text', 'label']), max_len, word2idx)
 
 	# Put datasets into loaders
-	train_loader = torch.utils.data.DataLoader(tr_dataset, batch_size=24, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
-	dev_loader = torch.utils.data.DataLoader(dv_dataset, batch_size=24, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
-	test_loader = torch.utils.data.DataLoader(te_dataset, batch_size=24, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
+	train_loader = torch.utils.data.DataLoader(tr_dataset, batch_size=24, shuffle=True, drop_last=True)#, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
+	dev_loader = torch.utils.data.DataLoader(dv_dataset, batch_size=24, shuffle=True, drop_last=True)#, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
+	test_loader = torch.utils.data.DataLoader(te_dataset, batch_size=24, shuffle=True, drop_last=True)#, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
 
 	return train_loader, dev_loader, test_loader, embeddings_matrix, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len
 
@@ -362,13 +362,16 @@ if __name__ == '__main__':
 
 					# Get inputs and labels
 					inputs = example[0]
-
 					labels = example[1]
 
 					# Zero the parameter gradients
 					optimizer.zero_grad()
 
 					inputs = torch.stack((inputs))
+
+					inputs = inputs.to(device)
+					labels = labels.to(device)
+
 					outputs = model(inputs).squeeze()
 
 					loss = loss_fn(outputs, labels.float())
@@ -379,10 +382,13 @@ if __name__ == '__main__':
 
 				for example in dev_loader:
 					inputs = example[0]
-
 					labels = example[1]
 
 					inputs = torch.stack((inputs))
+
+					inputs = inputs.to(device)
+					labels = labels.to(device)
+
 					outputs = model(inputs).squeeze()
 
 
@@ -412,7 +418,7 @@ if __name__ == '__main__':
 					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
 					while len(sent) < max_len:
 						sent.append(word2idx['<pad>'])
-					sent = torch.tensor(sent)
+					sent = torch.tensor(sent).to(device)
 
 					train_pred.append(model(sent).squeeze().item())
 
@@ -423,8 +429,8 @@ if __name__ == '__main__':
 					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
 					while len(sent) < max_len:
 						sent.append(word2idx['<pad>'])
-					sent = torch.tensor(sent)
-					dev_pred.append(model(sent).item())
+					sent = torch.tensor(sent).to(device)
+					dev_pred.append(model(sent).squeeze().item())
 
 			# Create test_pred
 			test_pred = []
@@ -434,8 +440,8 @@ if __name__ == '__main__':
 					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
 					while len(sent) < max_len:
 						sent.append(word2idx['<pad>'])
-					sent = torch.tensor(sent)
-					test_pred.append(model(sent).item())
+					sent = torch.tensor(sent).to(device)
+					test_pred.append(model(sent).squeeze().item())
 
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
@@ -444,8 +450,8 @@ if __name__ == '__main__':
 					sent = [word2idx[y] if y in word2idx else word2idx['<unk>'] for y in x.split(' ')]
 					while len(sent) < max_len:
 						sent.append(word2idx['<pad>'])
-					sent = torch.tensor(sent)
-					eec_preds[language][emotion][k].append(model(sent).item())
+					sent = torch.tensor(sent).to(device)
+					eec_preds[language][emotion][k].append(model(sent).squeeze().item())
 
 
 			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
