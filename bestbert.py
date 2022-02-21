@@ -8,6 +8,8 @@ from transformers import TrainingArguments
 from transformers import Trainer
 from transformers import AutoConfig
 import math
+from torch.utils.data.dataloader import default_collate
+
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score

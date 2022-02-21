@@ -7,6 +7,7 @@ import argparse
 import transformers # pytorch transformers
 from transformers import TrainingArguments
 from transformers import Trainer
+from torch.utils.data.dataloader import default_collate
 
 import math
 from datasets import Dataset
