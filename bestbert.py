@@ -346,8 +346,6 @@ if __name__ == '__main__':
 					inputs = data['text']
 					labels = data['label'].float()
 
-					inputs = torch.stack((inputs))
-
 					#inputs = inputs.to(device)
 					labels = labels.to(device)
 
