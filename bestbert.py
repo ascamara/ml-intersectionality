@@ -349,7 +349,7 @@ if __name__ == '__main__':
 					#inputs = inputs.to(device)
 					labels = labels.to(device)
 
-					outputs = model(inputs).squeeze()
+					outputs = finetuned_model_dict[language][emotion](inputs).squeeze()
 					dev_loss = loss_fn(outputs, labels)
 
 					total_loss += dev_loss.item()
