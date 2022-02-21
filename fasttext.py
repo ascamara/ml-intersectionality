@@ -200,7 +200,7 @@ def get_data(language, emotion, device):
 	dv_x, dv_y = [dv_ex[i][0] for i in range(len(dv_ex))], [float(dv_ex[i][1]) for i in range(len(dv_ex))] 
 	tr_x, tr_y = [tr_ex[i][0] for i in range(len(tr_ex))], [float(tr_ex[i][1]) for i in range(len(tr_ex))]
 
-	tr_x, tr_y, dv_x, dv_y, te_x, te_y = tr_x.to(device), tr_y.to(device), dv_x.to(device), dv_y.to(device), te_x.to(device), te_y.to(device)
+	#tr_x, tr_y, dv_x, dv_y, te_x, te_y = tr_x.to(device), tr_y.to(device), dv_x.to(device), dv_y.to(device), te_x.to(device), te_y.to(device)
 
 	if language == 'en' or language == 'en_es' or language == 'en_ar':
 		embeddings_matrix, word2idx = load_vectors('ft_en', vocab)
@@ -217,9 +217,9 @@ def get_data(language, emotion, device):
 	te_dataset = FTDataset(pd.DataFrame(list(zip(te_x, te_y)), columns=['text', 'label']), max_len, word2idx)
 
 	# Put datasets into loaders
-	train_loader = torch.utils.data.DataLoader(tr_dataset, batch_size=24, shuffle=True, drop_last=True)
-	dev_loader = torch.utils.data.DataLoader(dv_dataset, batch_size=24, shuffle=True, drop_last=True)
-	test_loader = torch.utils.data.DataLoader(te_dataset, batch_size=24, shuffle=True, drop_last=True)
+	train_loader = torch.utils.data.DataLoader(tr_dataset, batch_size=24, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
+	dev_loader = torch.utils.data.DataLoader(dv_dataset, batch_size=24, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
+	test_loader = torch.utils.data.DataLoader(te_dataset, batch_size=24, shuffle=True, drop_last=True, collate_fn=lambda x: tuple(x_.to(device) for x_ in default_collate(x)))
 
 	return train_loader, dev_loader, test_loader, embeddings_matrix, word2idx, tr_x, tr_y, dv_x, dv_y, te_x, te_y, max_len
 
@@ -402,6 +402,8 @@ if __name__ == '__main__':
 				
 			print('ok finished training', language, emotion)
 
+			model.to('cpu')
+
 			# Create train_pred
 			train_pred = []
 			with torch.no_grad():
@@ -433,8 +435,6 @@ if __name__ == '__main__':
 						sent.append(word2idx['<pad>'])
 					sent = torch.tensor(sent)
 					test_pred.append(model(sent).item())
-
-			model.to('cpu')
 
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
