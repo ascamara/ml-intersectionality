@@ -109,7 +109,7 @@ def get_features(setter, tokenizer, model, device):
 
 	loader = get_dataloader(setter)
 
-	for chunky in x:
+	for chunky in loader:
 
 		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
 
