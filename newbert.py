@@ -95,7 +95,7 @@ def get_hidden_size(model, tokenizer):
 	return size
 
 
-def get_dataloade(x):
+def get_dataloader(x):
 	# Put x and y into Dataset objects
 	train_dataset = Dataset.from_pandas(pd.DataFrame(x), columns=['text'])
 
