@@ -233,20 +233,22 @@ def get_model(embeddings_matrix, word2idx, hid_size=128):
 			super(fastTextRegressor, self).__init__()
 
 			self.embeddings = nn.Embedding.from_pretrained(embeddings=embeddings)
-			self.linear1 = nn.Linear(embedding_dim, 1)
-			#self.activation = nn.ReLU()
-			#self.linear2 = nn.Linear(hid_size , 1, dtype=torch.float64)
+			self.linear1 = nn.Linear(embedding_dim, hid_size)
+			self.activation = nn.ReLU()
+			self.linear2 = nn.Linear(hid_size , 1, dtype=torch.float64)
 
 		def forward(self, x):
 			if len(x.shape) == 1:
 				out = self.embeddings(x).permute(1, 0)
 				out = out.sum(dim=1) #pooling = sum from Pytorch
 				out = self.linear1(out) #cast to float, pass through linear 1st layer
+				out = self.linear2(self.activation(out))
 				return out
 			
 			out = self.embeddings(x).permute(1, 0, 2)
 			out = out.sum(dim=1) #pooling = sum from Pytorch
 			out = self.linear1(out) #cast to float, pass through linear 1st layer
+			out = self.linear2(self.activation(out))
 			return out
 
 	# Convert embeddings to a PyTorch tensor
@@ -321,7 +323,7 @@ if __name__ == '__main__':
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
 	# Training Variables
-	epochs = 20
+	epochs = 5
 	learning_rate = 0.001
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	print('DEVICE:', device)
@@ -397,7 +399,7 @@ if __name__ == '__main__':
 					total_loss += dev_loss.item()
 				
 				print(total_loss)
-				if prev_loss - total_loss < 0.01 and epoch > 5: 
+				if prev_loss - total_loss < 0: 
 					print("EARLY STOPPING")
 					print("EPOCH #")
 					print(epoch)

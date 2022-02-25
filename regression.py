@@ -111,7 +111,7 @@ if __name__ == '__main__':
 						for elt in v:
 
 							y.append(elt)
-							X.append([r,g,i])
+							X.append([1,r,g,i])
 				X = np.array([np.array(xi) for xi in X])
 				y = np.array([yi for yi in y])
 
@@ -119,13 +119,18 @@ if __name__ == '__main__':
 				#print(y.shape)
 				#print(X.shape)
 
-				y_pred, b = run_regression(y,X)
+				#y_pred, b = run_regression(y,X)
+				
+
+				# Calculate OLS regression coefficients
+				b = np.matmul(np.matmul(np.linalg.inv(np.matmul(np.array(X).transpose(), np.array(X))), X.transpose()), y)
+
 
 				n = len(y)
 				k = 3
 
 				#https://jianghaochu.github.io/calculating-t-statistic-for-ols-regression-in-python.html
-				residual = y - y_pred  # calculate the residual
+				residual = y - np.matmul(X, b)  # calculate the residual
 				sigma_hat = sum(residual ** 2) / (n - k - 1)  # estimate of error term variance
 				variance_beta_hat = sigma_hat * np.linalg.inv(np.matmul(X.transpose(), X))
 
@@ -135,7 +140,7 @@ if __name__ == '__main__':
 
 				rows.append([language, emotion, model, b.tolist(), t_stat.tolist(), p_value.tolist()])
 
-with open('statistics_without_intercept.csv', 'w') as f:
+with open('OLS_w_intercept.csv', 'w') as f:
       
     # using csv.writer method from CSV package
     write = csv.writer(f)

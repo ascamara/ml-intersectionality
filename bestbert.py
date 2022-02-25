@@ -291,7 +291,8 @@ if __name__ == '__main__':
 	finetuned_model_dict = get_models(args.model, emotions, args.freeze)
 
 	# Training Variables
-	epochs = 10
+	#epochs = 10
+	epochs = 5
 	learning_rate = 0.001
 
 	# Loop through each (language, emotion/dataset) pair
@@ -354,7 +355,8 @@ if __name__ == '__main__':
 
 					total_loss += dev_loss.item()
 				print(total_loss)
-				if prev_loss - total_loss < 0.01 and epoch > 5: 
+				#if prev_loss - total_loss < 0.01 and epoch > 5: 
+				if prev_loss - total_loss < 0: 
 					print("EARLY STOPPING")
 					print("EPOCH #")
 					print(epoch)
