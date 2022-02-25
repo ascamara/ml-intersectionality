@@ -95,7 +95,7 @@ def get_hidden_size(model, tokenizer):
 	return size
 
 
-def get_features(setter, tokenizer, model):
+def get_features(setter, tokenizer, model, device):
 	
 	tokenized_tr = [tokenizer.encode(x, add_special_tokens=True) for x in setter]
 
@@ -107,8 +107,8 @@ def get_features(setter, tokenizer, model):
 	padded = np.array([i + [0]*(max_len-len(i)) for i in tokenized_tr])
 	attention_mask = np.where(padded != 0, 1, 0)
 	
-	input_ids = torch.tensor(padded)  
-	attention_mask = torch.tensor(attention_mask)
+	input_ids = torch.tensor(padded).to(device)
+	attention_mask = torch.tensor(attention_mask).to(device)
 
 	with torch.no_grad():
 		last_hidden_states = model(input_ids, attention_mask=attention_mask)
@@ -116,7 +116,7 @@ def get_features(setter, tokenizer, model):
 	return features_tr
 
 
-def get_model(model, language):
+def get_model(model, language, device):
 
 	finetuned_model_dict = {}
 
@@ -125,7 +125,7 @@ def get_model(model, language):
 		if language == 'en' or language == 'en_es' or language == 'en_ar':
 		
 			tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-			model_class = AutoModelForMaskedLM.from_pretrained("bert-base-uncased")
+			model_class = AutoModelForMaskedLM.from_pretrained("bert-base-uncased").to(device)
 			pretrained_weights = "bert-base-uncased"
 
 			return model_class, tokenizer
@@ -133,7 +133,7 @@ def get_model(model, language):
 		elif language == 'es':
 
 			tokenizer = AutoTokenizer.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased")
-			model_class = AutoModelForMaskedLM.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased")
+			model_class = AutoModelForMaskedLM.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased").to(device)
 			pretrained_weights = "dccuchile/bert-base-spanish-wwm-uncased"
 
 			return model_class, tokenizer
@@ -141,7 +141,7 @@ def get_model(model, language):
 		elif language == 'ar':
 
 			tokenizer = AutoTokenizer.from_pretrained("asafaya/bert-base-arabic")
-			model_class = AutoModelForMaskedLM.from_pretrained("asafaya/bert-base-arabic")
+			model_class = AutoModelForMaskedLM.from_pretrained("asafaya/bert-base-arabic").to(device)
 			pretrained_weights = "asafaya/bert-base-arabic"
 
 			return model_class, tokenizer
@@ -150,7 +150,7 @@ def get_model(model, language):
 
 		pretrained_weights = "bert-base-multilingual-cased"
 		tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-		model_class = AutoModelForMaskedLM.from_pretrained("bert-base-multilingual-cased")
+		model_class = AutoModelForMaskedLM.from_pretrained("bert-base-multilingual-cased").to(device)
 
 		return model_class, tokenizer
 
@@ -158,7 +158,7 @@ def get_model(model, language):
 
 		pretrained_weights = "xlm-roberta-base"
 		tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
-		model_class = AutoModelForMaskedLM.from_pretrained("xlm-roberta-base")
+		model_class = AutoModelForMaskedLM.from_pretrained("xlm-roberta-base").to(device)
 
 		return model_class, tokenizer
 
@@ -292,14 +292,14 @@ if __name__ == '__main__':
 
 			eec_dict_cur = eec_dict[language][emotion]
 
-			model, tokenizer = get_model(args.model, language)
+			model, tokenizer = get_model(args.model, language, device)
 
 			# Move model to device
 			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 
-			features_tr = get_features(tr_x, tokenizer, model)
-			features_dv = get_features(dv_x, tokenizer, model)
-			features_te = get_features(te_x, tokenizer, model)
+			features_tr = get_features(tr_x, tokenizer, model, device)
+			features_dv = get_features(dv_x, tokenizer, model, device)
+			features_te = get_features(te_x, tokenizer, model, device)
 
 			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
 
