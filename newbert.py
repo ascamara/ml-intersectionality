@@ -353,7 +353,7 @@ if __name__ == '__main__':
 			test_pred = reg.predict(features_te)
 
 			for k, v in eec_dict_cur.items():
-				features = get_features(v, tokenizer, model)
+				features = get_features(v, tokenizer, model, device)
 				pred = reg.predict(features)
 				eec_preds[language][dataset][k] = pred.tolist()
 			
