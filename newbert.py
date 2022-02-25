@@ -95,25 +95,45 @@ def get_hidden_size(model, tokenizer):
 	return size
 
 
+def get_dataloade(x):
+	# Put x and y into Dataset objects
+	train_dataset = Dataset.from_pandas(pd.DataFrame(x), columns=['text'])
+
+	# Put datasets into loaders
+	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
+
+	return train_loader
+
+
 def get_features(setter, tokenizer, model, device):
+
+	loader = get_dataloader(setter)
+
+	for chunky in x:
+
+		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
+
 	
-	tokenized_tr = [tokenizer.encode(x, add_special_tokens=True) for x in setter]
+		#tokenized_tr = [tokenizer.encode(x, add_special_tokens=True) for x in chunky]
 
-	max_len = 0
-	for i in tokenized_tr:
-		if len(i) > max_len:
-			max_len = len(i)
+		#max_len = 0
+		#for i in tokenized_tr:
+		#	if len(i) > max_len:
+		#		max_len = len(i)
 
-	padded = np.array([i + [0]*(max_len-len(i)) for i in tokenized_tr])
-	attention_mask = np.where(padded != 0, 1, 0)
-	
-	input_ids = torch.tensor(padded).to(device)
-	attention_mask = torch.tensor(attention_mask).to(device)
+		#padded = np.array([i + [0]*(max_len-len(i)) for i in tokenized_tr])
+		#attention_mask = np.where(padded != 0, 1, 0)
+		
+		#input_ids = torch.tensor(padded).to(device)
+		#attention_mask = torch.tensor(attention_mask).to(device)
 
-	with torch.no_grad():
-		last_hidden_states = model(input_ids, attention_mask=attention_mask)
-	features_tr = last_hidden_states[0][:,0,:].numpy()
-	return features_tr
+		input_ids = batch['input_ids'].to(device)
+		attention_mask = batch['attention_mask'].to(device)
+
+		with torch.no_grad():
+			last_hidden_states = model(input_ids, attention_mask=attention_mask)
+		features_tr = last_hidden_states[0][:,0,:].numpy()
+		return features_tr
 
 
 def get_model(model, language, device):
