@@ -333,11 +333,11 @@ if __name__ == '__main__':
 			mlp_reg = MLPRegressor()
 
 			parameters = {
-			'hidden_layer_sizes': [(128),(256),(512)],
+			'hidden_layer_sizes': [(128),(256)],
 			'activation': ['tanh', 'relu'],
 			'alpha': [0.0001, .001],
-			'solver': ['lbfgs'],
-			'alpha': [0.0001, .001, 0.05],
+			'solver': ['lbfgs', 'adam'],
+			'alpha': [0.0001, .001],
 			'learning_rate': ['constant','adaptive'],
 			}
 
