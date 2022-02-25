@@ -97,7 +97,7 @@ def get_hidden_size(model, tokenizer):
 
 def get_dataloader(x):
 	# Put x and y into Dataset objects
-	train_dataset = Dataset.from_pandas(pd.DataFrame(x), columns=['text'])
+	train_dataset = Dataset.from_pandas(pd.DataFrame(x, columns=['text']))
 
 	# Put datasets into loaders
 	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
