@@ -107,9 +107,12 @@ def get_dataloader(x):
 
 def get_features(setter, tokenizer, model, device):
 
-	loader = get_dataloader(setter)
+	def chunker(seq, size):
+		return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
-	for chunky in loader:
+	lhs = []
+
+	for chunky in chunker(setter, 16):
 
 		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
 
@@ -132,8 +135,11 @@ def get_features(setter, tokenizer, model, device):
 
 		with torch.no_grad():
 			last_hidden_states = model(input_ids, attention_mask=attention_mask)
-		features_tr = last_hidden_states[0][:,0,:].numpy()
-		return features_tr
+		lhs.append(last_hidden_states[0][:,0,:].to('cpu'))
+
+	features_tr = torch.cat(lhs, dim=0)
+	
+	return features_tr
 
 
 def get_model(model, language, device):
