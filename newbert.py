@@ -325,17 +325,17 @@ if __name__ == '__main__':
 			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
 
 			#try two things
-			mlp_reg = MLPRegressor()
+			mlp_reg = MLPRegressor(max_iter=300)
 
 			parameters = {
 			'hidden_layer_sizes': [(128),(256)],
 			'activation': ['tanh', 'relu'],
-			'solver': ['lbfgs', 'adam'],
+			'solver': ['sgd', 'adam'],
 			'alpha': [0.0001, .001],
 			}
 
 			ps = PredefinedSplit(test_fold=split_index)
-			reg = GridSearchCV(mlp_reg, parameters, verbose=1, cv=ps)
+			reg = GridSearchCV(mlp_reg, parameters, verbose=3, cv=ps)
 
 			X = np.concatenate((features_tr, features_dv), axis=0)
 			y = np.concatenate((tr_y, dv_y), axis=0)
