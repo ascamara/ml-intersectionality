@@ -112,7 +112,7 @@ def get_features(setter, tokenizer, model, device):
 
 	lhs = []
 
-	for chunky in chunker(setter, 16):
+	for chunky in chunker(setter, 64):
 
 		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
 	
@@ -304,10 +304,6 @@ if __name__ == '__main__':
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
 	eec_dict = get_eecs()
-	# Training Variables
-	#epochs = 10
-	epochs = 5
-	learning_rate = 0.001
 
 	# Loop through each (language, emotion/dataset) pair
 	for language in languages:
@@ -334,14 +330,12 @@ if __name__ == '__main__':
 			parameters = {
 			'hidden_layer_sizes': [(128),(256)],
 			'activation': ['tanh', 'relu'],
+			'solver': ['lbfgs', 'adam'],
 			'alpha': [0.0001, .001],
-			'solver': ['sgd', 'adam'],
-			'alpha': [0.0001, .001],
-			'learning_rate': ['constant','adaptive'],
 			}
 
 			ps = PredefinedSplit(test_fold=split_index)
-			reg = GridSearchCV(mlp_reg, parameters, n_jobs=4, verbose=1, cv=ps)
+			reg = GridSearchCV(mlp_reg, parameters, verbose=1, cv=ps)
 
 			X = np.concatenate((features_tr, features_dv), axis=0)
 			y = np.concatenate((tr_y, dv_y), axis=0)
