@@ -115,7 +115,6 @@ def get_features(setter, tokenizer, model, device):
 	for chunky in chunker(setter, 16):
 
 		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
-
 	
 		#tokenized_tr = [tokenizer.encode(x, add_special_tokens=True) for x in chunky]
 
@@ -336,7 +335,7 @@ if __name__ == '__main__':
 			'hidden_layer_sizes': [(128),(256)],
 			'activation': ['tanh', 'relu'],
 			'alpha': [0.0001, .001],
-			'solver': ['lbfgs', 'adam'],
+			'solver': ['sgd', 'adam'],
 			'alpha': [0.0001, .001],
 			'learning_rate': ['constant','adaptive'],
 			}
@@ -355,7 +354,7 @@ if __name__ == '__main__':
 			for k, v in eec_dict_cur.items():
 				features = get_features(v, tokenizer, model, device)
 				pred = reg.predict(features)
-				eec_preds[language][dataset][k] = pred.tolist()
+				eec_preds[language][emotion][k] = pred.tolist()
 			
 			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
 
