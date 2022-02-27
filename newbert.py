@@ -9,7 +9,6 @@ from transformers import Trainer
 from transformers import AutoConfig
 import math
 from torch.utils.data.dataloader import default_collate
-from sklearn import svm
 
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
@@ -130,18 +129,14 @@ def get_features(setter, tokenizer, model, device):
 		input_ids = torch.tensor(padded).to(device)
 		attention_mask = torch.tensor(attention_mask).to(device)
 
-		#input_ids = batch['input_ids'].to(device)
-		#attention_mask = batch['attention_mask'].to(device)
+		input_ids = batch['input_ids'].to(device)
+		attention_mask = batch['attention_mask'].to(device)
 
 		with torch.no_grad():
 			last_hidden_states = model(input_ids, attention_mask=attention_mask)
 		lhs.append(last_hidden_states[0][:,0,:].to('cpu'))
-
-	features_tr = torch.cat(lhs, dim=0)
-
-	print(lhs)
 	
-	return features_tr
+	return lhs
 
 
 def get_model(model, language, device):
@@ -333,11 +328,11 @@ if __name__ == '__main__':
 			features_dv = get_features(dv_x, tokenizer, model, device)
 			features_te = get_features(te_x, tokenizer, model, device)
 
-			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
+			split_index = [-1]*len(features_tr) + [0]*len(features_dv)
 
 			#try two things
-			'''
-			mlp_reg = MLPRegressor(max_iter=500)
+
+			mlp_reg = MLPRegressor()
 
 			parameters = {
 			'hidden_layer_sizes': [(128)],
@@ -345,22 +340,11 @@ if __name__ == '__main__':
 			'solver': ['adam'],
 			'alpha': [.001],
 			}
-			'''
-			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
-
-			mlp_reg = MLPRegressor()
-
-			parameters = {
-			'hidden_layer_sizes': [(128),(256)],
-			'activation': ['tanh', 'relu'],
-			'solver': ['sgd', 'adam'],
-			'alpha': [0.0001, .001],
-			}
 
 			ps = PredefinedSplit(test_fold=split_index)
 			reg = GridSearchCV(mlp_reg, parameters, verbose=3, cv=ps)
 
-			X = np.concatenate((tr_x, dv_x), axis=0)
+			X = np.concatenate((features_tr, features_dv), axis=0)
 			y = np.concatenate((tr_y, dv_y), axis=0)
 			reg.fit(X, y)
 
