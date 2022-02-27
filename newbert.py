@@ -112,7 +112,7 @@ def get_features(setter, tokenizer, model, device):
 
 	lhs = []
 
-	for chunky in chunker(setter, 16):
+	for chunky in tqdm(chunker(setter, 16)):
 
 		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
 	
@@ -341,7 +341,7 @@ if __name__ == '__main__':
 			'hidden_layer_sizes': [(128)],
 			'activation': ['tanh', 'relu'],
 			'solver': ['adam'],
-			'alpha': [.001],
+			'alpha': [.001, .0001],
 			}
 
 			ps = PredefinedSplit(test_fold=split_index)
