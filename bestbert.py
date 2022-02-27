@@ -143,15 +143,11 @@ def get_model(model, emotions, freeze):
 			model_class = AutoModelForMaskedLM.from_pretrained("bert-base-uncased").to(device)
 			pretrained_weights = "bert-base-uncased"
 
-			return model_class, tokenizer
-
 		elif language == 'es':
 
 			tokenizer = AutoTokenizer.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased")
 			model_class = AutoModelForMaskedLM.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased").to(device)
 			pretrained_weights = "dccuchile/bert-base-spanish-wwm-uncased"
-
-			return model_class, tokenizer
 
 		elif language == 'ar':
 
@@ -159,15 +155,11 @@ def get_model(model, emotions, freeze):
 			model_class = AutoModelForMaskedLM.from_pretrained("asafaya/bert-base-arabic").to(device)
 			pretrained_weights = "asafaya/bert-base-arabic"
 
-			return model_class, tokenizer
-
 	if model == 'mbert':
 
 		pretrained_weights = "bert-base-multilingual-cased"
 		tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
 		model_class = AutoModelForMaskedLM.from_pretrained("bert-base-multilingual-cased").to(device)
-
-		return model_class, tokenizer
 
 	if model == 'xlmroberta':
 
