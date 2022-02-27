@@ -134,7 +134,10 @@ def get_features(setter, tokenizer, model, device):
 
 		with torch.no_grad():
 			last_hidden_states = model(input_ids, attention_mask=attention_mask)
-		lhs.append(last_hidden_states[0][:,0,:].to('cpu'))
+		for ex in last_hidden_states[0][:,0,:].to('cpu').tolist():
+			lhs.append(ex)
+
+	print(len(lhs))
 	
 	return lhs
 
