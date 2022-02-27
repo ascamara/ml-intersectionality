@@ -346,6 +346,13 @@ if __name__ == '__main__':
 
 			X = features_tr + features_dv
 			y = np.concatenate((tr_y, dv_y), axis=0)
+
+			print(len(X))
+			print(len(y))
+
+			print(X.shape)
+			print(y.shape)
+
 			reg.fit(X, y)
 
 			train_pred = reg.predict(features_tr)
