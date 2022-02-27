@@ -129,8 +129,8 @@ def get_features(setter, tokenizer, model, device):
 		input_ids = torch.tensor(padded).to(device)
 		attention_mask = torch.tensor(attention_mask).to(device)
 
-		input_ids = batch['input_ids'].to(device)
-		attention_mask = batch['attention_mask'].to(device)
+		#input_ids = batch['input_ids'].to(device)
+		#attention_mask = batch['attention_mask'].to(device)
 
 		with torch.no_grad():
 			last_hidden_states = model(input_ids, attention_mask=attention_mask)
