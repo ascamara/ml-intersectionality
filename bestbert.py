@@ -175,8 +175,8 @@ def get_model(model, emotions, freeze):
 		tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
 		model_class = AutoModelForMaskedLM.from_pretrained("xlm-roberta-base").to(device)
 
-	model = ModelRegressor(model_class, tokenizer, pretrained_weights, freeze)
-	return model
+	reg = ModelRegressor(model_class, tokenizer, pretrained_weights, freeze).to(device)
+	return reg
 
 def get_data(language, emotion, device):
 	if language == 'en' or language == 'en_es' or language == 'en_ar':
