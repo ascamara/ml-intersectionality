@@ -299,7 +299,8 @@ if __name__ == '__main__':
 	# EEC predictions dictionary
 	eec_preds = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 	# List of languages
-	languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
+	#languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
+	languages = ['en_ar']
 	# List of emotions (also our datasets)
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
@@ -328,9 +329,9 @@ if __name__ == '__main__':
 			mlp_reg = MLPRegressor(max_iter=300)
 
 			parameters = {
-			'hidden_layer_sizes': [(128),(256)],
+			'hidden_layer_sizes': [(256)],
 			'activation': ['tanh', 'relu'],
-			'solver': ['sgd', 'adam'],
+			'solver': ['adam'],
 			'alpha': [0.0001, .001],
 			}
 
