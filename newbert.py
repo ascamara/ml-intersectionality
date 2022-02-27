@@ -9,6 +9,7 @@ from transformers import Trainer
 from transformers import AutoConfig
 import math
 from torch.utils.data.dataloader import default_collate
+from sklearn import svm
 
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
@@ -335,14 +336,9 @@ if __name__ == '__main__':
 
 			#try two things
 
-			mlp_reg = MLPRegressor()
+			mlp_reg = svm.SVR()
 
-			parameters = {
-			'hidden_layer_sizes': [(128)],
-			'activation': ['tanh', 'relu'],
-			'solver': ['adam'],
-			'alpha': [.001, .0001],
-			}
+			parameters = {'C': [0.1, 1, 10], 'gamma': [0.1, 0.01, 0.001],'kernel': ['rbf', 'poly', 'sigmoid']}
 
 			ps = PredefinedSplit(test_fold=split_index)
 			reg = GridSearchCV(mlp_reg, parameters, verbose=3, cv=ps)
