@@ -314,9 +314,6 @@ if __name__ == '__main__':
 			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
 
-			# Train the model
-			loss_fn = torch.nn.MSELoss()
-
 			optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
 			total_steps = len(train_loader) * epochs
 			scheduler = get_linear_schedule_with_warmup(
@@ -324,7 +321,7 @@ if __name__ == '__main__':
 			num_warmup_steps=0,
 			num_training_steps=total_steps
 			)
-			loss_fn = nn.CrossEntropyLoss().to(device)
+			loss_fn = torch.nn.MSELoss().to(device)
 
 			# Loop through epochs
 			prev_loss = math.inf
