@@ -249,17 +249,25 @@ def get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred):
 	# Store results of train_pred
 	results['MSE'][language][emotion]['train'] = mean_squared_error(tr_y, train_pred)
 	results['Pearson'][language][emotion]['train'] = pearsonr(train_pred, tr_y)[0]
+
+	print('Pearson')
+	print(results['Pearson'][language][emotion]['train'])
+
 	results['Spearman'][language][emotion]['train'] = spearmanr(train_pred, tr_y)[0]
 	# Store results of dev_pred
 	results['MSE'][language][emotion]['dev'] = mean_squared_error(dv_y, dev_pred)
 	results['Pearson'][language][emotion]['dev'] = pearsonr(dev_pred, dv_y)[0]
 	results['Spearman'][language][emotion]['dev'] = spearmanr(dev_pred, dv_y)[0]
 
+	print(results['Pearson'][language][emotion]['dev'])
 
 	# Store results of test_pred
 	results['MSE'][language][emotion]['test'] = mean_squared_error(te_y, test_pred)
 	results['Pearson'][language][emotion]['test'] = pearsonr(test_pred, te_y)[0]
 	results['Spearman'][language][emotion]['test'] = spearmanr(test_pred, te_y)[0]
+	
+	print(results['Pearson'][language][emotion]['test'])
+
 	return results
 
 def write_results(results, eec_preds, model, freeze):
