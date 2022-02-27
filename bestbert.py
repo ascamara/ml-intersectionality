@@ -271,7 +271,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	#bert, mbert, xlmroberta
 	parser.add_argument('--model', type=str, default='bert')
-	parser.add_argument('--freeze', action='store_true', help='include flag to freeze params')
+	parser.add_argument('--freeze', action='store_false', help='include flag to freeze params')
 
 	args = parser.parse_args()
 
