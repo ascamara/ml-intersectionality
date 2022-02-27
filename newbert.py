@@ -115,23 +115,23 @@ def get_features(setter, tokenizer, model, device):
 
 	for chunky in chunker(setter, 16):
 
-		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
+		#batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
 	
-		#tokenized_tr = [tokenizer.encode(x, add_special_tokens=True) for x in chunky]
+		tokenized_tr = [tokenizer.encode(x, add_special_tokens=True) for x in chunky]
 
-		#max_len = 0
-		#for i in tokenized_tr:
-		#	if len(i) > max_len:
-		#		max_len = len(i)
+		max_len = 0
+		for i in tokenized_tr:
+			if len(i) > max_len:
+				max_len = len(i)
 
-		#padded = np.array([i + [0]*(max_len-len(i)) for i in tokenized_tr])
-		#attention_mask = np.where(padded != 0, 1, 0)
+		padded = np.array([i + [0]*(max_len-len(i)) for i in tokenized_tr])
+		attention_mask = np.where(padded != 0, 1, 0)
 		
-		#input_ids = torch.tensor(padded).to(device)
-		#attention_mask = torch.tensor(attention_mask).to(device)
+		input_ids = torch.tensor(padded).to(device)
+		attention_mask = torch.tensor(attention_mask).to(device)
 
-		input_ids = batch['input_ids'].to(device)
-		attention_mask = batch['attention_mask'].to(device)
+		#input_ids = batch['input_ids'].to(device)
+		#attention_mask = batch['attention_mask'].to(device)
 
 		with torch.no_grad():
 			last_hidden_states = model(input_ids, attention_mask=attention_mask)
@@ -344,17 +344,21 @@ if __name__ == '__main__':
 			'alpha': [.001],
 			}
 			'''
-
-			reg = svm.SVR()
-
 			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
 
-			parameters = {'C': [0.1, 1, 10, 100], 'gamma': [1, 0.1, 0.01, 0.001],'kernel': ['rbf', 'poly', 'sigmoid']}
+			mlp_reg = MLPRegressor()
+
+			parameters = {
+			'hidden_layer_sizes': [(128),(256)],
+			'activation': ['tanh', 'relu'],
+			'solver': ['sgd', 'adam'],
+			'alpha': [0.0001, .001],
+			}
 
 			ps = PredefinedSplit(test_fold=split_index)
-			reg = GridSearchCV(reg, parameters, verbose=3, cv=ps)
+			reg = GridSearchCV(mlp_reg, parameters, verbose=3, cv=ps)
 
-			X = np.concatenate((features_tr, features_dv), axis=0)
+			X = np.concatenate((tr_x, dv_x), axis=0)
 			y = np.concatenate((tr_y, dv_y), axis=0)
 			reg.fit(X, y)
 
