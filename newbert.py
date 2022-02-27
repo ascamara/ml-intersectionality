@@ -112,7 +112,7 @@ def get_features(setter, tokenizer, model, device):
 
 	lhs = []
 
-	for chunky in chunker(setter, 64):
+	for chunky in chunker(setter, 16):
 
 		batch = tokenizer(chunky, padding=True, truncation=True, return_tensors="pt")
 	
@@ -250,8 +250,6 @@ def get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred):
 	results['MSE'][language][emotion]['train'] = mean_squared_error(tr_y, train_pred)
 	results['Pearson'][language][emotion]['train'] = pearsonr(train_pred, tr_y)[0]
 	results['Spearman'][language][emotion]['train'] = spearmanr(train_pred, tr_y)[0]
-
-
 	# Store results of dev_pred
 	results['MSE'][language][emotion]['dev'] = mean_squared_error(dv_y, dev_pred)
 	results['Pearson'][language][emotion]['dev'] = pearsonr(dev_pred, dv_y)[0]
@@ -299,9 +297,10 @@ if __name__ == '__main__':
 	# EEC predictions dictionary
 	eec_preds = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 	# List of languages
-	#languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
-	languages = ['en_ar']
-	# List of emotions (also our datasets)
+	languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
+	#languages = ['en_ar']
+	#languages = ['ar']
+        # List of emotions (also our datasets)
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
 	eec_dict = get_eecs()
@@ -326,13 +325,13 @@ if __name__ == '__main__':
 			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
 
 			#try two things
-			mlp_reg = MLPRegressor(max_iter=300)
+			mlp_reg = MLPRegressor(max_iter=500)
 
 			parameters = {
-			'hidden_layer_sizes': [(256)],
+			'hidden_layer_sizes': [(128)],
 			'activation': ['tanh', 'relu'],
-			'solver': ['adam'],
-			'alpha': [0.0001, .001],
+			'solver': ['lbfgs', 'adam'],
+			'alpha': [.001],
 			}
 
 			ps = PredefinedSplit(test_fold=split_index)
