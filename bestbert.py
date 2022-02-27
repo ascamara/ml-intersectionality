@@ -94,7 +94,8 @@ def get_hidden_size(model, tokenizer):
 	"""
 	with torch.no_grad():
 		x = tokenizer('Sample sentence for tokenizer', padding='max_length', max_length=64, truncation=True, return_tensors='pt')
-		size = model(**x)[0][:,0,:].shape[1]
+		outputs = self.bert(**x, output_hidden_states=True)
+		pooled_output=outputs.hidden_states[-1][:,0,:].shape[-1]
 	return size
 
 def get_model(model, emotions, freeze):
