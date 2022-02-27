@@ -318,7 +318,7 @@ if __name__ == '__main__':
 			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
 
-			optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
+			optimizer = AdamW(model.parameters(), lr=2e-5)
 			total_steps = len(train_loader) * epochs
 			scheduler = get_linear_schedule_with_warmup(
 			optimizer,
