@@ -344,15 +344,14 @@ if __name__ == '__main__':
 			ps = PredefinedSplit(test_fold=split_index)
 			reg = GridSearchCV(mlp_reg, parameters, verbose=3, cv=ps)
 
+			print(features_tr)
+
+			print(len(features_tr))
+
+			print(len(features_dv))
+
 			X = features_tr + features_dv
 			y = np.concatenate((tr_y, dv_y), axis=0)
-
-			print(len(X))
-			print(len(y))
-
-			print(X.shape)
-			print(y.shape)
-
 			reg.fit(X, y)
 
 			train_pred = reg.predict(features_tr)
