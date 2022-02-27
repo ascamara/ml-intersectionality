@@ -298,119 +298,138 @@ if __name__ == '__main__':
 	epochs = 10
 	learning_rate = 0.001
 
+	#en	joy	xlmroberta_True
+	#en	sadness	xlmroberta_True
+	#en_es	anger	xlmroberta_True
+	# en_es	valence	xlmroberta_True
+	#en_ar	valence	xlmroberta_True
+	#es	anger	xlmroberta_True
+	#es	fear	xlmroberta_True
+	#es	sadness	xlmroberta_True
+	#ar	anger	xlmroberta_True
+	#ar	fear	xlmroberta_True
+	#ar	joy	xlmroberta_True
+	#ar	sadness	xlmroberta_True
+
+	pairs = [('en', 'joy'), ('en', 'sadness'), ('en_es', 'anger'),
+				('en_es', 'valence'), ('en_ar', 'valence'), ('es', 'anger'),
+				('es', 'fear'), ('es', 'sadness'), ('ar', 'anger'),
+				('ar', 'fear'), ('ar', 'joy'), ('ar', 'sadness')]
+
 	# Loop through each (language, emotion/dataset) pair
-	for language in languages:
-		for emotion in emotions:
+	for language, emotion in pairs:
+	#for language in languages:
+		#for emotion in emotions:
 
-			print('***', language, emotion, '***')
+		print('***', language, emotion, '***')
 
-			eec_dict_cur = eec_dict[language][emotion]
+		eec_dict_cur = eec_dict[language][emotion]
 
-			# Move model to device
-			#finetuned_model_dict[language][emotion].to(device)
+		# Move model to device
+		#finetuned_model_dict[language][emotion].to(device)
 
-			model = get_model(args.model, language, device)
+		model = get_model(args.model, language, device)
 
-			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
-			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
+		tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
+		train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
 
-			optimizer = AdamW(model.parameters(), lr=2e-5)
-			total_steps = len(train_loader) * epochs
-			scheduler = get_linear_schedule_with_warmup(
-			optimizer,
-			num_warmup_steps=0,
-			num_training_steps=total_steps
-			)
-			loss_fn = torch.nn.MSELoss().to(device)
+		optimizer = AdamW(model.parameters(), lr=2e-5)
+		total_steps = len(train_loader) * epochs
+		scheduler = get_linear_schedule_with_warmup(
+		optimizer,
+		num_warmup_steps=0,
+		num_training_steps=total_steps
+		)
+		loss_fn = torch.nn.MSELoss().to(device)
 
-			# Loop through epochs
-			prev_loss = math.inf
-			for epoch in range(epochs):
+		# Loop through epochs
+		prev_loss = math.inf
+		for epoch in range(epochs):
 
-				# Keep track of statistics
-				total_loss = 0
-				running_loss = 0
-				cnt = 0
+			# Keep track of statistics
+			total_loss = 0
+			running_loss = 0
+			cnt = 0
 
-				for i, data in tqdm(enumerate(train_loader, 0)):
+			for i, data in tqdm(enumerate(train_loader, 0)):
 
-					# Get inputs and labels
-					inputs = data['text']
-					labels = data['label'].float()
+				# Get inputs and labels
+				inputs = data['text']
+				labels = data['label'].float()
 
-					# Zero the parameter gradients
-					optimizer.zero_grad()
+				# Zero the parameter gradients
+				optimizer.zero_grad()
 
-					# Forward, backward, optimize
+				# Forward, backward, optimize
 
-					#inputs = inputs.to(device)
-					labels = labels.to(device)
+				#inputs = inputs.to(device)
+				labels = labels.to(device)
 
-					outputs = model(inputs)
+				outputs = model(inputs)
 
-					loss = loss_fn(outputs.squeeze(), labels)
-					loss.backward()
+				loss = loss_fn(outputs.squeeze(), labels)
+				loss.backward()
 
-					optimizer.step()
-					scheduler.step()
-					cnt = cnt + 1
-					running_loss += loss.item()
+				optimizer.step()
+				scheduler.step()
+				cnt = cnt + 1
+				running_loss += loss.item()
 
-				for i, data in tqdm(enumerate(train_loader, 0)):
-					inputs = data['text']
-					labels = data['label'].float()
+			for i, data in tqdm(enumerate(train_loader, 0)):
+				inputs = data['text']
+				labels = data['label'].float()
 
-					#inputs = inputs.to(device)
-					labels = labels.to(device)
+				#inputs = inputs.to(device)
+				labels = labels.to(device)
 
-					outputs = model(inputs)
-					dev_loss = loss_fn(outputs.squeeze(), labels)
+				outputs = model(inputs)
+				dev_loss = loss_fn(outputs.squeeze(), labels)
 
-					total_loss += dev_loss.item()
-				print(total_loss)
-				#if prev_loss - total_loss < 0.01 and epoch > 5: 
-				if prev_loss - total_loss < 0 and epoch > 2: 
-					print("EARLY STOPPING")
-					print("EPOCH #")
-					print(epoch)
-					break
-				else:
-					prev_loss = total_loss
+				total_loss += dev_loss.item()
+			print(total_loss)
+			#if prev_loss - total_loss < 0.01 and epoch > 5: 
+			if prev_loss - total_loss < 0 and epoch > 2: 
+				print("EARLY STOPPING")
+				print("EPOCH #")
+				print(epoch)
+				break
+			else:
+				prev_loss = total_loss
 
-				# Print statistics
-				print('ESTIMATED LOSS:', running_loss/cnt)
-				
-			print('ok finished training', language, emotion)
+			# Print statistics
+			print('ESTIMATED LOSS:', running_loss/cnt)
+			
+		print('ok finished training', language, emotion)
 
-			# Create train_pred
-			train_pred = []
-			with torch.no_grad():
-				for x in tr_x:
-					train_pred.append(model(x).item())
+		# Create train_pred
+		train_pred = []
+		with torch.no_grad():
+			for x in tr_x:
+				train_pred.append(model(x).item())
 
-			# Create dev_pred
-			dev_pred = []
-			with torch.no_grad():
-				for x in dv_x:
-					dev_pred.append(model(x).item())
+		# Create dev_pred
+		dev_pred = []
+		with torch.no_grad():
+			for x in dv_x:
+				dev_pred.append(model(x).item())
 
-			# Create test_pred
-			test_pred = []
-			with torch.no_grad():
-				for x in te_x:
-					test_pred.append(model(x).item())
+		# Create test_pred
+		test_pred = []
+		with torch.no_grad():
+			for x in te_x:
+				test_pred.append(model(x).item())
 
-			# Move device back to CPU
-			#finetuned_model_dict[language][emotion].to('cpu')
+		# Move device back to CPU
+		#finetuned_model_dict[language][emotion].to('cpu')
 
-			#Create EEC preds
-			for k, v in eec_dict_cur.items():
-				for x in v:
-					eec_preds[language][emotion][k].append(model(x).item())
+		#Create EEC preds
+		for k, v in eec_dict_cur.items():
+			for x in v:
+				eec_preds[language][emotion][k].append(model(x).item())
 
 
-			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
+		results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
 
-			print_results(language, emotion, results, eec_preds[language][emotion], args.model, args.freeze)
+		print_results(language, emotion, results, eec_preds[language][emotion], args.model, args.freeze)
 
 	write_results(results, eec_preds, args.model, args.freeze)
