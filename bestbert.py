@@ -121,10 +121,16 @@ def get_models(model, emotions, freeze):
 			with torch.no_grad():
 				x = self.tokenizer(x, padding='max_length', max_length=64, truncation=True, return_tensors='pt').to(device)
 			# Feed tokens into BERT
-			net = self.bert(**x)[0][:,0,:]
-			net = torch.flatten(net, start_dim=1)
+			input_ids=x['input_ids'].flatten()
+			attention_mask=x['attention_mask'].flatten()
+
+			_, pooled_output = self.bert(
+			input_ids=input_ids,
+			attention_mask=attention_mask
+			)
+
 			# Feed BERT into feed forward net
-			net = self.sm0(self.fc0(net))
+			net = self.sm0(self.fc0(pooled_output))
 			net = self.fc1(net)
 			return net
 
@@ -233,19 +239,24 @@ def get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred):
 	# Store results of train_pred
 	results['MSE'][language][emotion]['train'] = mean_squared_error(tr_y, train_pred)
 	results['Pearson'][language][emotion]['train'] = pearsonr(train_pred, tr_y)[0]
+
+	print('Pearson')
+	print(results['Pearson'][language][emotion]['train'])
+
 	results['Spearman'][language][emotion]['train'] = spearmanr(train_pred, tr_y)[0]
-
-
 	# Store results of dev_pred
 	results['MSE'][language][emotion]['dev'] = mean_squared_error(dv_y, dev_pred)
 	results['Pearson'][language][emotion]['dev'] = pearsonr(dev_pred, dv_y)[0]
 	results['Spearman'][language][emotion]['dev'] = spearmanr(dev_pred, dv_y)[0]
 
+	print(results['Pearson'][language][emotion]['dev'])
 
 	# Store results of test_pred
 	results['MSE'][language][emotion]['test'] = mean_squared_error(te_y, test_pred)
 	results['Pearson'][language][emotion]['test'] = pearsonr(test_pred, te_y)[0]
 	results['Spearman'][language][emotion]['test'] = spearmanr(test_pred, te_y)[0]
+	
+	print(results['Pearson'][language][emotion]['test'])
 	return results
 
 def write_results(results, eec_preds, model, freeze):
@@ -292,7 +303,7 @@ if __name__ == '__main__':
 
 	# Training Variables
 	#epochs = 10
-	epochs = 5
+	epochs = 10
 	learning_rate = 0.001
 
 	# Loop through each (language, emotion/dataset) pair
@@ -311,7 +322,15 @@ if __name__ == '__main__':
 
 			# Train the model
 			loss_fn = torch.nn.MSELoss()
-			optimizer = torch.optim.Adam(finetuned_model_dict[language][emotion].parameters(), lr=learning_rate)
+
+			optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
+			total_steps = len(train_data_loader) * EPOCHS
+			scheduler = get_linear_schedule_with_warmup(
+			optimizer,
+			num_warmup_steps=0,
+			num_training_steps=total_steps
+			)
+			loss_fn = nn.CrossEntropyLoss().to(device)
 
 			# Loop through epochs
 			prev_loss = math.inf
@@ -336,9 +355,12 @@ if __name__ == '__main__':
 					#inputs = inputs.to(device)
 					labels = labels.to(device)
 
-					outputs = finetuned_model_dict[language][emotion](inputs).squeeze()
+					outputs = finetuned_model_dict[language][emotion](inputs)
+
 					loss = loss_fn(outputs, labels)
 					loss.backward()
+
+					scheduler.step()
 					optimizer.step()
 					cnt = cnt + 1
 					running_loss += loss.item()
@@ -356,7 +378,7 @@ if __name__ == '__main__':
 					total_loss += dev_loss.item()
 				print(total_loss)
 				#if prev_loss - total_loss < 0.01 and epoch > 5: 
-				if prev_loss - total_loss < 0: 
+				if prev_loss - total_loss < 0 and epoch > 2: 
 					print("EARLY STOPPING")
 					print("EPOCH #")
 					print(epoch)
