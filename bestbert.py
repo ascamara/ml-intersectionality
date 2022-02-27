@@ -94,7 +94,7 @@ def get_hidden_size(model, tokenizer):
 		size = model(**x)[0][:,0,:].shape[1]
 	return size
 
-def get_models(model, emotions, freeze):
+def get_model(model, emotions, freeze):
 
 	finetuned_model_dict = {}
 
@@ -135,47 +135,47 @@ def get_models(model, emotions, freeze):
 			return net
 
 	if model == 'bert':
+
+		if language == 'en' or language == 'en_es' or language == 'en_ar':
 		
-		tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-		model_class = AutoModelForMaskedLM.from_pretrained("bert-base-uncased")
-		pretrained_weights = "bert-base-uncased"
+			tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+			model_class = AutoModelForMaskedLM.from_pretrained("bert-base-uncased").to(device)
+			pretrained_weights = "bert-base-uncased"
 
-		finetuned_model_dict['en'] = {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions}
-		finetuned_model_dict['en_es'] = {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions}
-		finetuned_model_dict['en_ar'] = {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions}
+			return model_class, tokenizer
 
-		tokenizer = AutoTokenizer.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased")
-		model_class = AutoModelForMaskedLM.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased")
-		pretrained_weights = "dccuchile/bert-base-spanish-wwm-uncased"
+		elif language == 'es':
 
-		finetuned_model_dict['es'] = {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions}
+			tokenizer = AutoTokenizer.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased")
+			model_class = AutoModelForMaskedLM.from_pretrained("dccuchile/bert-base-spanish-wwm-uncased").to(device)
+			pretrained_weights = "dccuchile/bert-base-spanish-wwm-uncased"
 
-		tokenizer = AutoTokenizer.from_pretrained("asafaya/bert-base-arabic")
-		model_class = AutoModelForMaskedLM.from_pretrained("asafaya/bert-base-arabic")
-		pretrained_weights = "asafaya/bert-base-arabic"
+			return model_class, tokenizer
 
-		finetuned_model_dict['ar'] = {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions}
+		elif language == 'ar':
 
+			tokenizer = AutoTokenizer.from_pretrained("asafaya/bert-base-arabic")
+			model_class = AutoModelForMaskedLM.from_pretrained("asafaya/bert-base-arabic").to(device)
+			pretrained_weights = "asafaya/bert-base-arabic"
+
+			return model_class, tokenizer
 
 	if model == 'mbert':
 
 		pretrained_weights = "bert-base-multilingual-cased"
 		tokenizer = AutoTokenizer.from_pretrained("bert-base-multilingual-cased")
-		model_class = AutoModelForMaskedLM.from_pretrained("bert-base-multilingual-cased")
+		model_class = AutoModelForMaskedLM.from_pretrained("bert-base-multilingual-cased").to(device)
 
-		finetuned_model_dict = {language : {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions} for language in languages}
-
+		return model_class, tokenizer
 
 	if model == 'xlmroberta':
 
 		pretrained_weights = "xlm-roberta-base"
 		tokenizer = AutoTokenizer.from_pretrained("xlm-roberta-base")
-		model_class = AutoModelForMaskedLM.from_pretrained("xlm-roberta-base")
+		model_class = AutoModelForMaskedLM.from_pretrained("xlm-roberta-base").to(device)
 
-		finetuned_model_dict = {language : {emotion : ModelRegressor(model_class, tokenizer, pretrained_weights, freeze) for emotion in emotions} for language in languages}
-
-	return finetuned_model_dict
-
+	model = ModelRegressor(model_class, tokenizer, pretrained_weights, freeze)
+	return model
 
 def get_data(language, emotion, device):
 	if language == 'en' or language == 'en_es' or language == 'en_ar':
@@ -299,7 +299,6 @@ if __name__ == '__main__':
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
 	eec_dict = get_eecs()
-	finetuned_model_dict = get_models(args.model, emotions, args.freeze)
 
 	# Training Variables
 	#epochs = 10
@@ -317,7 +316,7 @@ if __name__ == '__main__':
 			# Move model to device
 			#finetuned_model_dict[language][emotion].to(device)
 
-			model, tokenizer = get_model(args.model, language, device)
+			model = get_model(args.model, language, device)
 
 			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
