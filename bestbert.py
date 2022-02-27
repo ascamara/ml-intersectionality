@@ -12,7 +12,7 @@ from torch.utils.data.dataloader import default_collate
 from transformers import BertModel, BertTokenizer, get_linear_schedule_with_warmup
 
 
-import torch.optim.AdamW as AdamW
+from torch.optim import AdamW
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
