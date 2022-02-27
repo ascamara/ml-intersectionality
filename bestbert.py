@@ -315,7 +315,9 @@ if __name__ == '__main__':
 			eec_dict_cur = eec_dict[language][emotion]
 
 			# Move model to device
-			finetuned_model_dict[language][emotion].to(device)
+			#finetuned_model_dict[language][emotion].to(device)
+
+			model, tokenizer = get_model(args.model, language, device)
 
 			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 			train_loader, dev_loader, test_loader = get_dataloaders(tr_x, tr_y, dv_x, dv_y, te_x, te_y)
@@ -355,7 +357,7 @@ if __name__ == '__main__':
 					#inputs = inputs.to(device)
 					labels = labels.to(device)
 
-					outputs = finetuned_model_dict[language][emotion](inputs)
+					outputs = model(inputs)
 
 					loss = loss_fn(outputs, labels)
 					loss.backward()
@@ -372,7 +374,7 @@ if __name__ == '__main__':
 					#inputs = inputs.to(device)
 					labels = labels.to(device)
 
-					outputs = finetuned_model_dict[language][emotion](inputs).squeeze()
+					outputs = model(inputs)
 					dev_loss = loss_fn(outputs, labels)
 
 					total_loss += dev_loss.item()
@@ -395,19 +397,19 @@ if __name__ == '__main__':
 			train_pred = []
 			with torch.no_grad():
 				for x in tr_x:
-					train_pred.append(finetuned_model_dict[language][emotion](x).item())
+					train_pred.append(model(x).item())
 
 			# Create dev_pred
 			dev_pred = []
 			with torch.no_grad():
 				for x in dv_x:
-					dev_pred.append(finetuned_model_dict[language][emotion](x).item())
+					dev_pred.append(model(x).item())
 
 			# Create test_pred
 			test_pred = []
 			with torch.no_grad():
 				for x in te_x:
-					test_pred.append(finetuned_model_dict[language][emotion](x).item())
+					test_pred.append(model(x).item())
 
 			# Move device back to CPU
 			#finetuned_model_dict[language][emotion].to('cpu')
@@ -415,7 +417,7 @@ if __name__ == '__main__':
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
 				for x in v:
-					eec_preds[language][emotion][k].append(finetuned_model_dict[language][emotion](x).item())
+					eec_preds[language][emotion][k].append(model(x).item())
 
 
 			results = get_results(tr_x, te_y, dv_y, train_pred, test_pred, dev_pred)
