@@ -9,6 +9,7 @@ from transformers import Trainer
 from transformers import AutoConfig
 import math
 from torch.utils.data.dataloader import default_collate
+from sklearn import svm
 
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
@@ -333,17 +334,25 @@ if __name__ == '__main__':
 			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
 
 			#try two things
+			'''
 			mlp_reg = MLPRegressor(max_iter=500)
 
 			parameters = {
 			'hidden_layer_sizes': [(128)],
 			'activation': ['tanh', 'relu'],
-			'solver': ['lbfgs', 'adam'],
+			'solver': ['adam'],
 			'alpha': [.001],
 			}
+			'''
+
+			reg = svm.SVR()
+
+			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
+
+			parameters = {'C': [0.1, 1, 10, 100], 'gamma': [1, 0.1, 0.01, 0.001],'kernel': ['rbf', 'poly', 'sigmoid']}
 
 			ps = PredefinedSplit(test_fold=split_index)
-			reg = GridSearchCV(mlp_reg, parameters, verbose=3, cv=ps)
+			reg = GridSearchCV(reg, parameters, verbose=3, cv=ps)
 
 			X = np.concatenate((features_tr, features_dv), axis=0)
 			y = np.concatenate((tr_y, dv_y), axis=0)
