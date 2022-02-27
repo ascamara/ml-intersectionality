@@ -318,7 +318,7 @@ if __name__ == '__main__':
 			loss_fn = torch.nn.MSELoss()
 
 			optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
-			total_steps = len(train_data_loader) * EPOCHS
+			total_steps = len(train_loader) * epochs
 			scheduler = get_linear_schedule_with_warmup(
 			optimizer,
 			num_warmup_steps=0,
