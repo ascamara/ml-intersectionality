@@ -9,8 +9,10 @@ from transformers import Trainer
 from transformers import AutoConfig
 import math
 from torch.utils.data.dataloader import default_collate
-from transformers import BertModel, BertTokenizer, AdamW, get_linear_schedule_with_warmup
+from transformers import BertModel, BertTokenizer, get_linear_schedule_with_warmup
 
+
+import torch.optim.AdamW as AdamW
 from datasets import Dataset
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
@@ -125,10 +127,12 @@ def get_model(model, emotions, freeze):
 			input_ids=x['input_ids'].flatten()
 			attention_mask=x['attention_mask'].flatten()
 
-			_, pooled_output = self.bert(
+			outputs = self.bert(
 			input_ids=input_ids,
 			attention_mask=attention_mask
 			)
+
+			print(outputs)
 
 			# Feed BERT into feed forward net
 			net = self.sm0(self.fc0(pooled_output))
