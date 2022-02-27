@@ -348,11 +348,11 @@ if __name__ == '__main__':
 
 					outputs = model(inputs)
 
-					loss = loss_fn(outputs, labels)
+					loss = loss_fn(outputs.squeeze(), labels)
 					loss.backward()
 
-					scheduler.step()
 					optimizer.step()
+					scheduler.step()
 					cnt = cnt + 1
 					running_loss += loss.item()
 
@@ -364,7 +364,7 @@ if __name__ == '__main__':
 					labels = labels.to(device)
 
 					outputs = model(inputs)
-					dev_loss = loss_fn(outputs, labels)
+					dev_loss = loss_fn(outputs.squeeze(), labels)
 
 					total_loss += dev_loss.item()
 				print(total_loss)
