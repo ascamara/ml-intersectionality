@@ -124,13 +124,8 @@ def get_model(model, emotions, freeze):
 			with torch.no_grad():
 				x = self.tokenizer(x, padding='max_length', max_length=64, truncation=True, return_tensors='pt').to(device)
 			# Feed tokens into BERT
-			input_ids=x['input_ids'].flatten()
-			attention_mask=x['attention_mask'].flatten()
 
-			outputs = self.bert(
-			input_ids=input_ids,
-			attention_mask=attention_mask
-			)
+			outputs = self.bert(**x)
 
 			print(outputs)
 
