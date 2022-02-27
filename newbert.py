@@ -138,6 +138,8 @@ def get_features(setter, tokenizer, model, device):
 		lhs.append(last_hidden_states[0][:,0,:].to('cpu'))
 
 	features_tr = torch.cat(lhs, dim=0)
+
+	print(lhs)
 	
 	return features_tr
 
