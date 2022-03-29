@@ -298,18 +298,9 @@ if __name__ == '__main__':
 	epochs = 10
 	learning_rate = 0.001
 
-	#en	joy	xlmroberta_True
-	#en	sadness	xlmroberta_True
-	#en_es	anger	xlmroberta_True
-	# en_es	valence	xlmroberta_True
-	#en_ar	valence	xlmroberta_True
 	#es	anger	xlmroberta_True
-	#es	fear	xlmroberta_True
-	#es	sadness	xlmroberta_True
 	#ar	anger	xlmroberta_True
 	#ar	fear	xlmroberta_True
-	#ar	joy	xlmroberta_True
-	#ar	sadness	xlmroberta_True
 
 	pairs = [('en', 'joy'), ('en', 'sadness'), ('en_es', 'anger'),
 				('en_es', 'valence'), ('en_ar', 'valence'), ('es', 'anger'),

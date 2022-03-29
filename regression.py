@@ -37,7 +37,7 @@ def run_regression(y,X):
 		logLikelihood, 
 		x0=x0,
 		args=(y,X), 
-		bounds=[(None,None), (None,None), (None,None), (0,None)])
+		bounds=[(None,None),(None,None),(None,None),(0,None)])
 
 	b = np.array(res.x[0:X.shape[1]])   # optimal regression parameters
 	y_ = expit(np.dot(X,b))
@@ -80,16 +80,7 @@ if __name__ == '__main__':
 
 	languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
-	models = ['bert_True', 
-		'mbert_True',
-		'xlmroberta_True',
-		'bert_False', 
-		'mbert_False',
-		'xlmroberta_False',
-		'ft',
-		'baseline_svm',
-		'baseline_lr']
-
+	models = ['bert_True', 'mbert_True', 'xlmroberta_True', 'baseline_lr', 'ft']
 
 	for language in languages:
 		for emotion in emotions:
@@ -97,7 +88,7 @@ if __name__ == '__main__':
 
 				print(language, emotion, model)
 
-				with open("results/eec_preds_{}_{}_{}.json".format(language, emotion, model),"r") as f:
+				with open("stats/eec_preds_{}_{}_{}.json".format(language, emotion, model),"r") as f:
 					data = json.load(f)
 
 				y = []
@@ -111,7 +102,7 @@ if __name__ == '__main__':
 						for elt in v:
 
 							y.append(elt)
-							X.append([1,r,g,i])
+							X.append([r,g,i])
 				X = np.array([np.array(xi) for xi in X])
 				y = np.array([yi for yi in y])
 
@@ -119,7 +110,7 @@ if __name__ == '__main__':
 				#print(y.shape)
 				#print(X.shape)
 
-				#y_pred, b = run_regression(y,X)
+				y_pred, b = run_regression(y,X)
 				
 
 				# Calculate OLS regression coefficients
@@ -127,10 +118,10 @@ if __name__ == '__main__':
 
 
 				n = len(y)
-				k = 3
+				k = 2
 
 				#https://jianghaochu.github.io/calculating-t-statistic-for-ols-regression-in-python.html
-				residual = y - np.matmul(X, b)  # calculate the residual
+				residual = y - y_pred  # calculate the residual
 				sigma_hat = sum(residual ** 2) / (n - k - 1)  # estimate of error term variance
 				variance_beta_hat = sigma_hat * np.linalg.inv(np.matmul(X.transpose(), X))
 
@@ -140,7 +131,7 @@ if __name__ == '__main__':
 
 				rows.append([language, emotion, model, b.tolist(), t_stat.tolist(), p_value.tolist()])
 
-with open('OLS_w_intercept.csv', 'w') as f:
+with open('BETA_REG_WO_INT.csv', 'w') as f:
       
     # using csv.writer method from CSV package
     write = csv.writer(f)

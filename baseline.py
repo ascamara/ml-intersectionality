@@ -12,8 +12,9 @@ from torch.utils.data.dataloader import default_collate
 from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+import scipy.sparse
 from datasets import Dataset
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import PredefinedSplit, GridSearchCV
@@ -259,9 +260,9 @@ def write_results(results, eec_preds, model, freeze):
 
 def print_results(language, emotion, results, eec_preds, model):
 	# Save results as JSON
-	with open("results/results_{}_{}_{}.json".format(language, emotion, model),"w") as f:
+	with open("RESULTS_THE_FIN/results_{}_{}_{}.json".format(language, emotion, model),"w") as f:
 		json.dump(results,f)
-	with open("results/eec_preds_{}_{}_{}.json".format(language, emotion, model),"w") as f:
+	with open("RESULTS_THE_FIN/eec_preds_{}_{}_{}.json".format(language, emotion, model),"w") as f:
 		json.dump(eec_preds, f)
 
 if __name__ == '__main__':
@@ -285,7 +286,8 @@ if __name__ == '__main__':
 	# EEC predictions dictionary
 	eec_preds = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 	# List of languages
-	languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
+	#languages = ['en', 'en_es', 'en_ar', 'es', 'ar']
+	languages = ['en_ar']
 	# List of emotions (also our datasets)
 	emotions = ['anger', 'fear', 'joy', 'sadness', 'valence']
 
@@ -307,7 +309,7 @@ if __name__ == '__main__':
 
 			tr_x, tr_y, dv_x, dv_y, te_x, te_y = get_data(language, emotion, device)
 
-			reg = LinearRegression()
+			reg = svm.SVR()
 			vectorizer = TfidfVectorizer(ngram_range =(1,2),
 				min_df=2,
 				max_features=200000) 
@@ -315,11 +317,21 @@ if __name__ == '__main__':
 			te_x = vectorizer.transform(te_x)
 			dv_x = vectorizer.transform(dv_x)
 
-			reg.fit(tr_x, tr_y)
+			tr_x=np.asarray(tr_x.todense())
+			te_x=np.asarray(te_x.todense())
+			dv_x=np.asarray(dv_x.todense())
 
+			split_index = [-1]*len(tr_x) + [0]*len(dv_x)
 
-			#pred_y_train = clf.predict(tr_x)
-			#pred_y = clf.predict(te_x)
+			parameters = {'C': [0.1, 1, 10, 100], 'gamma': [1, 0.1, 0.01, 0.001],'kernel': ['rbf', 'poly', 'sigmoid']}
+
+			ps = PredefinedSplit(test_fold=split_index)
+			reg = GridSearchCV(reg, parameters, verbose=3, cv=ps)
+
+			X = np.concatenate((tr_x, dv_x), axis=0)
+			y = np.concatenate((tr_y, dv_y), axis=0)
+			reg.fit(X, y)
+
 			
 			print('ok finished training', language, emotion)
 
@@ -334,6 +346,7 @@ if __name__ == '__main__':
 			#Create EEC preds
 			for k, v in eec_dict_cur.items():
 				v_ = vectorizer.transform(v)
+				v_ = np.asarray(v_.todense())
 				eec_preds[language][emotion][k] = reg.predict(v_).tolist()
 
 
